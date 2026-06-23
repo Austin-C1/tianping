@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest";
 import Home from "./page";
 
 describe("Home", () => {
-  it("shows the stage 1 skeleton status", () => {
+  it("shows the product trading workspace", () => {
     render(<Home />);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "Polymarket 三方基础交易平台"
+      "PMX Trading"
     );
-    expect(screen.getByText("Stage 1 / Engineering Skeleton")).toBeInTheDocument();
-    expect(screen.getByText("PostgreSQL + Prisma")).toBeInTheDocument();
+    expect(screen.getByText("市场浏览")).toBeInTheDocument();
+    expect(screen.getByText("订单预览")).toBeInTheDocument();
+    expect(screen.getByText("人工确认 Gate")).toBeInTheDocument();
   });
 });

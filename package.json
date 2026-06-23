@@ -8,8 +8,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev --workspace @pmx/web\" \"npm run start:dev --workspace @pmx/api\"",
-    "build": "npm run build --workspace @pmx/shared && npm run build --workspace @pmx/api && npm run build --workspace @pmx/web",
+    "dev": "concurrently \"npm run dev --workspace @pmx/web\" \"npm run dev --workspace @pmx/admin\" \"npm run start:dev --workspace @pmx/api\"",
+    "dev:admin": "npm run dev --workspace @pmx/admin",
+    "build": "npm run build --workspace @pmx/shared && npm run build --workspace @pmx/api && npm run build --workspace @pmx/web && npm run build --workspace @pmx/admin",
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "playwright test",
     "prisma:generate": "npm run prisma:generate --workspace @pmx/api",
@@ -18,7 +19,7 @@
   "devDependencies": {
     "@playwright/test": "latest",
     "concurrently": "latest",
-    "typescript": "latest"
+    "typescript": "5.6.3"
   },
   "engines": {
     "node": ">=20.11"

@@ -10,12 +10,12 @@
 
 | 项目 | 内容 |
 |---|---|
-| 前端做什么 | 创建 Next.js 应用、基础首页、测试入口、环境变量读取入口 |
+| 前端做什么 | 创建 Next.js 前台、接入 Art Design Pro 管理后台、建立基础页面和测试入口 |
 | 后端做什么 | 创建 NestJS 应用、健康检查、模块目录、Prisma、BullMQ 配置 |
-| 技术 | Next.js、React、NestJS、Prisma、PostgreSQL、Redis、BullMQ、Jest、Vitest、Playwright |
+| 技术 | Next.js、React、Vue 3、Vite、Element Plus、NestJS、Prisma、PostgreSQL、Redis、BullMQ、Jest、Vitest、Playwright |
 | 配置或权限 | 本地 `.env`、Docker PostgreSQL/Redis；不需要 Polymarket 权限 |
-| 如何测试 | `npm install`、`npm run prisma:generate`、`npm run build`、`npm test`、打开首页和 `/health` |
-| 通过标准 | 前后端能构建；健康检查可用；docs 固化范围和 Gate |
+| 如何测试 | `npm install`、`npm run prisma:generate`、`npm run build`、`npm test`、`npm run test:e2e` |
+| 通过标准 | 前台、后台、后端都能构建；健康检查可用；docs 固化范围和 Gate |
 | 人工确认 | 不需要 |
 
 ## 阶段 2：用户系统
@@ -24,11 +24,23 @@
 |---|---|
 | 前端做什么 | 注册、登录、退出、会话状态、受保护页面 |
 | 后端做什么 | 用户模型、密码哈希、JWT、刷新策略、基础权限守卫、审计登录事件 |
-| 技术 | NestJS Auth Guard、JWT、bcrypt/argon2、Prisma |
+| 技术 | NestJS Auth Guard、JWT、scrypt/argon2、Prisma |
 | 配置或权限 | JWT secret、密码策略、会话过期策略 |
 | 如何测试 | 注册/登录 API 集成测试、Web 表单测试、认证守卫测试 |
 | 通过标准 | 用户可注册登录；未登录不能访问受保护资源 |
 | 人工确认 | 密码策略和用户协议文案需要确认 |
+
+## 阶段 2.5：管理后台基线
+
+| 项目 | 内容 |
+|---|---|
+| 前端做什么 | 将 Art Design Pro 改成 PMX Admin，保留其布局、菜单、登录、权限、表格和路由架构，替换为 dashboard、用户、市场、订单、audit、risk 模块 |
+| 后端做什么 | 暂时复用 `/auth/login` 和 `/auth/me`；后续补 admin role / permission |
+| 技术 | Vue 3、Vite、Element Plus、Pinia、Art Design Pro、NestJS auth API |
+| 配置或权限 | `VITE_API_PROXY_URL=http://localhost:4000`；管理端账号权限后续需要人工定义 |
+| 如何测试 | `npm run build --workspace @pmx/admin`，登录接口映射检查 |
+| 通过标准 | 管理端能构建，菜单只保留 PMX 运营模块，不再暴露模板 demo |
+| 人工确认 | 管理端角色、权限、可操作范围需要确认 |
 
 ## 阶段 3：Polymarket 市场数据
 
@@ -160,3 +172,4 @@
 | G4 | 真实下单前 | 人工确认弹窗、订单摘要、交易路径展示 |
 | G5 | 小额真实交易前 | 测试市场、金额上限、失败处理预案 |
 | G6 | 内测前 | 内测用户、合规规则、日志保留和客服流程 |
+| G7 | 管理后台开放前 | 管理员角色、权限范围、可执行操作白名单 |
