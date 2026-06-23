@@ -6,6 +6,7 @@ export interface AdminSummary {
   adminUsers: number
   walletsConnected: number
   marketsSynced: number
+  marketQuotesSynced: number
   ordersPreviewed: number
   openRiskEvents: number
 }
@@ -45,6 +46,8 @@ export function fetchAdminGates() {
 export interface MarketSyncResult {
   synced: number
   failed: number
+  quotesSynced: number
+  quotesFailed: number
   error?: string
 }
 

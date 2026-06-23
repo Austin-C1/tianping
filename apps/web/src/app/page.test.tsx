@@ -96,6 +96,45 @@ describe("Home", () => {
     );
   });
 
+  it("uses CLOB best ask quotes before Gamma outcome prices", async () => {
+    window.localStorage.setItem("pmx.locale", "en");
+    fetchMarketsMock.mockResolvedValue([
+      {
+        id: "snapshot_1",
+        marketId: "market_1",
+        slug: "spread-colombia-dr-congo",
+        question: "Spread: Colombia (-5.5)",
+        category: "Sports",
+        active: true,
+        closed: false,
+        outcomes: ["Colombia", "DR Congo"],
+        outcomePrices: ["0.01", "0.99"],
+        volume: "746",
+        liquidity: "16729",
+        syncedAt: "2026-06-24T00:00:00.000Z",
+        quotes: [
+          {
+            outcome: "Colombia",
+            outcomeIndex: 0,
+            tokenId: "token_yes",
+            bestBid: "0.24",
+            bestAsk: "0.25",
+            midpoint: "0.245",
+            spread: "0.01",
+            minOrderSize: "5",
+            tickSize: "0.01",
+            syncedAt: "2026-06-24T00:00:02.000Z"
+          }
+        ]
+      }
+    ]);
+
+    renderHome();
+
+    expect(await screen.findByRole("link", { name: "Colombia 25c" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Colombia 1c" })).not.toBeInTheDocument();
+  });
+
   it("switches the trading workspace to English", () => {
     renderHome();
 

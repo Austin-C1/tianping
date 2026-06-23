@@ -256,12 +256,24 @@ function toDisplayMarket(market: MarketListItem, locale: Locale): DisplayMarket 
     question: localizeMarketQuestion(market.question, locale),
     category: localizeMarketCategory(market.category, locale, locale === "zh-CN" ? "市场" : "Market"),
     outcomes: toStringArray(market.outcomes).map((outcome) => localizeOutcome(outcome, locale)),
-    prices: toStringArray(market.outcomePrices).map((price) => Number(price)).filter(Number.isFinite)
+    prices: toOutcomePrices(market).map((price) => Number(price)).filter(Number.isFinite)
   };
 }
 
 function toStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String) : [];
+}
+
+function toOutcomePrices(market: MarketListItem): string[] {
+  const gammaPrices = toStringArray(market.outcomePrices);
+  const quotes = market.quotes ?? [];
+  const maxLength = Math.max(gammaPrices.length, quotes.length);
+
+  return Array.from({ length: maxLength }, (_, index) => {
+    const quote = quotes.find((item) => item.outcomeIndex === index);
+
+    return quote?.bestAsk ?? quote?.midpoint ?? gammaPrices[index] ?? "0";
+  });
 }
 
 function formatUsd(value: string | null): string {

@@ -12,6 +12,7 @@ export interface AdminSummary {
   adminUsers: number;
   walletsConnected: number;
   marketsSynced: number;
+  marketQuotesSynced: number;
   ordersPreviewed: number;
   openRiskEvents: number;
 }
@@ -36,6 +37,7 @@ export class AdminService {
       adminUsers,
       walletsConnected,
       marketsSynced,
+      marketQuotesSynced,
       ordersPreviewed,
       openRiskEvents
     ] = await Promise.all([
@@ -43,6 +45,7 @@ export class AdminService {
       this.prisma.user.count({ where: { role: "ADMIN" } }),
       this.prisma.wallet.count({ where: { type: "EOA" } }),
       this.prisma.marketSnapshot.count(),
+      this.prisma.marketQuoteSnapshot.count(),
       this.prisma.order.count({ where: { status: "PREVIEWED" } }),
       this.prisma.rateLimitEvent.count()
     ]);
@@ -52,6 +55,7 @@ export class AdminService {
       adminUsers,
       walletsConnected,
       marketsSynced,
+      marketQuotesSynced,
       ordersPreviewed,
       openRiskEvents
     };
@@ -62,17 +66,24 @@ export class AdminService {
 
     const [
       marketsSynced,
+      marketQuotesSynced,
       eoaWallets,
       depositWallets,
       latestMarket,
+      latestQuote,
       latestEoaWallet,
       latestDepositWallet,
       latestOrder
     ] = await Promise.all([
       this.prisma.marketSnapshot.count(),
+      this.prisma.marketQuoteSnapshot.count(),
       this.prisma.wallet.count({ where: { type: "EOA" } }),
       this.prisma.wallet.count({ where: { type: "DEPOSIT" } }),
       this.prisma.marketSnapshot.findFirst({
+        orderBy: { syncedAt: "desc" },
+        select: { syncedAt: true }
+      }),
+      this.prisma.marketQuoteSnapshot.findFirst({
         orderBy: { syncedAt: "desc" },
         select: { syncedAt: true }
       }),
@@ -99,6 +110,13 @@ export class AdminService {
         owner: "Engineering",
         status: marketsSynced > 0 ? "READY" : "PENDING",
         updatedAt: latestMarket?.syncedAt ?? null
+      },
+      {
+        key: "market-quote-sync",
+        title: "Market quote sync",
+        owner: "Engineering",
+        status: marketQuotesSynced > 0 ? "READY" : "PENDING",
+        updatedAt: latestQuote?.syncedAt ?? null
       },
       {
         key: "wallet-binding-proof",

@@ -1,6 +1,9 @@
 export interface MarketListItem {
   id: string;
   marketId: string;
+  conditionId?: string | null;
+  clobTokenIds?: unknown;
+  enableOrderBook?: boolean;
   slug: string | null;
   question: string;
   category: string | null;
@@ -9,7 +12,22 @@ export interface MarketListItem {
   outcomes: unknown;
   outcomePrices: unknown;
   volume: string | null;
+  volume24hr?: string | null;
   liquidity: string | null;
+  syncedAt: string;
+  quotes?: MarketQuoteItem[];
+}
+
+export interface MarketQuoteItem {
+  outcome: string;
+  outcomeIndex: number;
+  tokenId: string;
+  bestBid: string | null;
+  bestAsk: string | null;
+  midpoint: string | null;
+  spread: string | null;
+  minOrderSize: string | null;
+  tickSize: string | null;
   syncedAt: string;
 }
 

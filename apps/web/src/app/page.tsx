@@ -55,6 +55,9 @@ export default function Home() {
       ({
         id: "empty",
         marketId: "empty",
+        conditionId: null,
+        clobTokenIds: [],
+        enableOrderBook: false,
         slug: null,
         question: copy.emptyMarketQuestion,
         category: copy.emptyMarketCategory,
@@ -63,8 +66,10 @@ export default function Home() {
         outcomes: ["Yes", "No"],
         outcomePrices: ["0.00", "0.00"],
         volume: null,
+        volume24hr: null,
         liquidity: null,
-        syncedAt: ""
+        syncedAt: "",
+        quotes: []
       }) satisfies MarketListItem,
     [copy.emptyMarketCategory, copy.emptyMarketQuestion]
   );
@@ -86,7 +91,7 @@ export default function Home() {
       question: localizeMarketQuestion(market.question, locale),
       category: localizeMarketCategory(market.category, locale, copy.categoryFallback),
       outcomes: toStringArray(market.outcomes).map((outcome) => localizeOutcome(outcome, locale)),
-      prices: toStringArray(market.outcomePrices)
+      prices: toOutcomePrices(market)
     }));
   }, [copy.categoryFallback, emptyMarket, locale, markets]);
 
@@ -337,6 +342,18 @@ function getMarketStatus(copy: HomeMessages, status: MarketStatusKey): string {
 
 function toStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String) : [];
+}
+
+function toOutcomePrices(market: MarketListItem): string[] {
+  const gammaPrices = toStringArray(market.outcomePrices);
+  const quotes = market.quotes ?? [];
+  const maxLength = Math.max(gammaPrices.length, quotes.length);
+
+  return Array.from({ length: maxLength }, (_, index) => {
+    const quote = quotes.find((item) => item.outcomeIndex === index);
+
+    return quote?.bestAsk ?? quote?.midpoint ?? gammaPrices[index] ?? "0";
+  });
 }
 
 function toCents(value: string): string {

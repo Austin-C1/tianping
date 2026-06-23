@@ -60,8 +60,10 @@ const statusItems = computed(() => {
   if (path.startsWith('/markets')) {
     return [
       { label: '市场已同步', value: String(currentSummary.marketsSynced) },
+      { label: '行情已同步', value: String(currentSummary.marketQuotesSynced) },
       { label: '最近同步', value: syncMessage.value || '点击“同步市场”刷新' },
-      { label: '关口', value: gateStatus('market-data-sync') }
+      { label: '市场关口', value: gateStatus('market-data-sync') },
+      { label: '行情关口', value: gateStatus('market-quote-sync') }
     ]
   }
 
@@ -123,8 +125,8 @@ async function handleMarketSync() {
   try {
     const result = await syncMarkets()
     syncMessage.value = result.error
-      ? `已同步 ${result.synced} 个，失败 ${result.failed} 个：${result.error}`
-      : `已同步 ${result.synced} 个，失败 ${result.failed} 个`
+      ? `市场 ${result.synced}/${result.failed}，行情 ${result.quotesSynced}/${result.quotesFailed}：${result.error}`
+      : `市场 ${result.synced}/${result.failed}，行情 ${result.quotesSynced}/${result.quotesFailed}`
     await loadStatus()
   } catch (err) {
     error.value = err instanceof Error ? err.message : '同步市场失败'

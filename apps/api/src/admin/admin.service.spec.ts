@@ -14,6 +14,10 @@ describe("AdminService", () => {
       count: jest.fn(),
       findFirst: jest.fn()
     },
+    marketQuoteSnapshot: {
+      count: jest.fn(),
+      findFirst: jest.fn()
+    },
     order: {
       count: jest.fn(),
       findFirst: jest.fn()
@@ -29,6 +33,7 @@ describe("AdminService", () => {
     prisma.user.count.mockResolvedValueOnce(7).mockResolvedValueOnce(2);
     prisma.wallet.count.mockResolvedValue(3);
     prisma.marketSnapshot.count.mockResolvedValue(11);
+    prisma.marketQuoteSnapshot.count.mockResolvedValue(22);
     prisma.order.count.mockResolvedValue(5);
     prisma.rateLimitEvent.count.mockResolvedValue(1);
     const service = new AdminService(prisma as never);
@@ -38,6 +43,7 @@ describe("AdminService", () => {
       adminUsers: 2,
       walletsConnected: 3,
       marketsSynced: 11,
+      marketQuotesSynced: 22,
       ordersPreviewed: 5,
       openRiskEvents: 1
     });
@@ -49,6 +55,7 @@ describe("AdminService", () => {
       where: { type: "EOA" }
     });
     expect(prisma.marketSnapshot.count).toHaveBeenCalledWith();
+    expect(prisma.marketQuoteSnapshot.count).toHaveBeenCalledWith();
     expect(prisma.order.count).toHaveBeenCalledWith({
       where: { status: "PREVIEWED" }
     });
@@ -58,12 +65,15 @@ describe("AdminService", () => {
   it("returns gate statuses from current operational data", async () => {
     const prisma = createPrisma();
     const marketSyncedAt = new Date("2026-06-23T08:00:00.000Z");
+    const quoteSyncedAt = new Date("2026-06-23T08:01:00.000Z");
     const walletUpdatedAt = new Date("2026-06-23T09:00:00.000Z");
     const orderUpdatedAt = new Date("2026-06-23T10:00:00.000Z");
     prisma.marketSnapshot.count.mockResolvedValue(2);
+    prisma.marketQuoteSnapshot.count.mockResolvedValue(4);
     prisma.wallet.count.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
     prisma.order.count.mockResolvedValue(4);
     prisma.marketSnapshot.findFirst.mockResolvedValue({ syncedAt: marketSyncedAt });
+    prisma.marketQuoteSnapshot.findFirst.mockResolvedValue({ syncedAt: quoteSyncedAt });
     prisma.wallet.findFirst
       .mockResolvedValueOnce({ updatedAt: walletUpdatedAt })
       .mockResolvedValueOnce(null);
@@ -77,6 +87,13 @@ describe("AdminService", () => {
         owner: "Engineering",
         status: "READY",
         updatedAt: marketSyncedAt
+      },
+      {
+        key: "market-quote-sync",
+        title: "Market quote sync",
+        owner: "Engineering",
+        status: "READY",
+        updatedAt: quoteSyncedAt
       },
       {
         key: "wallet-binding-proof",

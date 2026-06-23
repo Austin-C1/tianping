@@ -26,7 +26,7 @@ describe("PolymarketClient", () => {
         }
       ]
     } as Response);
-    const client = new PolymarketClient(config());
+    const client = new PolymarketClient(config({ POLYMARKET_FETCH_MODE: "fetch" }));
 
     await expect(client.fetchActiveMarkets(3)).resolves.toEqual([
       {
@@ -86,6 +86,44 @@ describe("PolymarketClient", () => {
         question: "Will ETH all-time high in 2026?"
       }
     ]);
+  });
+
+  it("loads public CLOB order books in one batch request", async () => {
+    const fetchMock = jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          market: "condition_1",
+          asset_id: "token_yes",
+          hash: "book_hash",
+          bids: [{ price: "0.25", size: "100" }],
+          asks: [{ price: "0.27", size: "50" }],
+          min_order_size: "5",
+          tick_size: "0.01"
+        }
+      ]
+    } as Response);
+    const client = new PolymarketClient(config({ POLYMARKET_FETCH_MODE: "fetch" }));
+
+    await expect(client.fetchOrderBooks(["token_yes"])).resolves.toEqual([
+      {
+        market: "condition_1",
+        asset_id: "token_yes",
+        hash: "book_hash",
+        bids: [{ price: "0.25", size: "100" }],
+        asks: [{ price: "0.27", size: "50" }],
+        min_order_size: "5",
+        tick_size: "0.01"
+      }
+    ]);
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("https://clob.polymarket.com/books");
+    expect(fetchMock.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        body: JSON.stringify([{ token_id: "token_yes" }]),
+        method: "POST"
+      })
+    );
   });
 });
 

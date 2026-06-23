@@ -67,22 +67,52 @@ model Wallet {
 model MarketSnapshot {
   id          String   @id @default(cuid())
   marketId    String   @unique
+  conditionId String?
   slug        String?
   question    String
   category    String?
   active      Boolean
   closed      Boolean
+  enableOrderBook Boolean @default(false)
+  clobTokenIds Json?
   outcomes    Json?
   outcomePrices Json?
   volume      Decimal? @db.Decimal(18, 8)
+  volume24hr   Decimal? @db.Decimal(18, 8)
   liquidity   Decimal? @db.Decimal(18, 8)
   raw         Json
   syncedAt    DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  quotes      MarketQuoteSnapshot[]
   orders      Order[]
   trades      Trade[]
   positions   Position[]
+
+  @@index([conditionId])
+}
+
+model MarketQuoteSnapshot {
+  id               String         @id @default(cuid())
+  marketSnapshotId String
+  tokenId          String         @unique
+  outcome          String
+  outcomeIndex     Int
+  bestBid          Decimal?       @db.Decimal(18, 8)
+  bestAsk          Decimal?       @db.Decimal(18, 8)
+  midpoint         Decimal?       @db.Decimal(18, 8)
+  spread           Decimal?       @db.Decimal(18, 8)
+  minOrderSize     Decimal?       @db.Decimal(18, 8)
+  tickSize         Decimal?       @db.Decimal(18, 8)
+  orderBookHash    String?
+  raw              Json?
+  syncedAt         DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  marketSnapshot   MarketSnapshot @relation(fields: [marketSnapshotId], references: [id], onDelete: Cascade)
+
+  @@index([marketSnapshotId, outcomeIndex])
+  @@index([syncedAt])
 }
 
 model Order {
