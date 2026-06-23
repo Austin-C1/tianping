@@ -35,12 +35,24 @@
 | 项目 | 内容 |
 |---|---|
 | 前端做什么 | 将 Art Design Pro 改成 PMX Admin，保留其布局、菜单、登录、权限、表格和路由架构，替换为 dashboard、用户、市场、订单、audit、risk 模块 |
-| 后端做什么 | 暂时复用 `/auth/login` 和 `/auth/me`；后续补 admin role / permission |
+| 后端做什么 | 复用 `/auth/login` 和 `/auth/me`，登录结果包含用户角色，后台只接受 ADMIN |
 | 技术 | Vue 3、Vite、Element Plus、Pinia、Art Design Pro、NestJS auth API |
 | 配置或权限 | `VITE_API_PROXY_URL=http://localhost:4000`；管理端账号权限后续需要人工定义 |
 | 如何测试 | `npm run build --workspace @pmx/admin`，登录接口映射检查 |
 | 通过标准 | 管理端能构建，菜单只保留 PMX 运营模块，不再暴露模板 demo |
 | 人工确认 | 管理端角色、权限、可操作范围需要确认 |
+
+## 阶段 2.6：本地可用基线
+
+| 项目 | 内容 |
+|---|---|
+| 前端做什么 | 注册/登录页面显示真实 API 结果；账户页读取当前用户；管理端登录走 NestJS API |
+| 后端做什么 | 固化 `.env` 加载、CORS、管理员 seed、用户角色、后台用户接口 |
+| 技术 | NestJS、Prisma、PostgreSQL、Redis、Art Design Pro API proxy |
+| 配置或权限 | PostgreSQL 5432、Redis 6379、`ADMIN_EMAIL`、`ADMIN_PASSWORD` |
+| 如何测试 | `npm run build`、`npm test`、API `/health`、注册/登录浏览器验证、后台管理员登录 |
+| 通过标准 | API 能启动；前台注册和登录能写库；后台 `admin@pmx.local` 能登录并看到用户列表 |
+| 人工确认 | 如果 Docker 镜像拉取失败，需要确认是否允许重启 Docker Desktop 或改用外部数据库 |
 
 ## 阶段 3：Polymarket 市场数据
 

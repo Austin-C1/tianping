@@ -44,13 +44,18 @@ export class TokenService {
 
     const payload = this.decodeJson<JwtPayload>(encodedBody);
 
-    if (!payload || payload.exp < Math.floor(Date.now() / 1000)) {
+    if (
+      !payload ||
+      payload.exp < Math.floor(Date.now() / 1000) ||
+      !["USER", "ADMIN"].includes(payload.role)
+    ) {
       return null;
     }
 
     return {
       userId: payload.userId,
-      email: payload.email
+      email: payload.email,
+      role: payload.role
     };
   }
 

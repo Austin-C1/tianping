@@ -11,19 +11,22 @@ describe("TokenService", () => {
   it("signs and verifies an access token", () => {
     const token = service.signAccessToken({
       userId: "user_123",
-      email: "person@example.com"
+      email: "person@example.com",
+      role: "ADMIN"
     });
 
     expect(service.verifyAccessToken(token)).toMatchObject({
       userId: "user_123",
-      email: "person@example.com"
+      email: "person@example.com",
+      role: "ADMIN"
     });
   });
 
   it("rejects a tampered token", () => {
     const token = service.signAccessToken({
       userId: "user_123",
-      email: "person@example.com"
+      email: "person@example.com",
+      role: "USER"
     });
 
     expect(service.verifyAccessToken(`${token}tampered`)).toBeNull();

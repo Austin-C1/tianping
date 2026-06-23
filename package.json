@@ -14,6 +14,8 @@
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "playwright test",
     "prisma:generate": "npm run prisma:generate --workspace @pmx/api",
+    "db:migrate": "npm run prisma:migrate --workspace @pmx/api",
+    "db:seed": "npm run db:seed --workspace @pmx/api",
     "lint": "npm run lint --workspaces --if-present"
   },
   "devDependencies": {

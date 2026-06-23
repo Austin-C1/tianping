@@ -225,6 +225,9 @@
       if (!token) {
         throw new Error('Login failed - no token received')
       }
+      if (loginResult.user?.role !== 'ADMIN') {
+        throw new Error('Admin role is required')
+      }
 
       // 存储 token 和登录状态
       userStore.setToken(token, refreshToken)

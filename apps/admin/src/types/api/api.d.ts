@@ -76,6 +76,7 @@ declare namespace Api {
       user?: {
         id: string
         email: string
+        role: 'USER' | 'ADMIN'
       }
     }
 
@@ -86,7 +87,17 @@ declare namespace Api {
       userId: number
       userName: string
       email: string
+      role: 'USER' | 'ADMIN'
       avatar?: string
+    }
+  }
+
+  namespace Platform {
+    interface AdminUser {
+      id: string
+      email: string
+      role: 'USER' | 'ADMIN'
+      createdAt: string
     }
   }
 

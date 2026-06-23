@@ -24,7 +24,8 @@ describe("AuthService", () => {
     prisma.user.findUnique.mockResolvedValue(null);
     prisma.user.create.mockResolvedValue({
       id: "user_123",
-      email: "person@example.com"
+      email: "person@example.com",
+      role: "USER"
     });
     const service = new AuthService(prisma as never, passwordService, tokenService);
 
@@ -36,15 +37,17 @@ describe("AuthService", () => {
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: {
         email: "person@example.com",
-        passwordHash: expect.not.stringContaining("long-enough-password")
+        passwordHash: expect.not.stringContaining("long-enough-password"),
+        role: "USER"
       },
-      select: { id: true, email: true, createdAt: true }
+      select: { id: true, email: true, role: true, createdAt: true }
     });
     expect(result).toEqual({
       accessToken: "access-token",
       user: {
         id: "user_123",
-        email: "person@example.com"
+        email: "person@example.com",
+        role: "USER"
       }
     });
     expect(prisma.auditLog.create).toHaveBeenCalledWith({
@@ -80,6 +83,7 @@ describe("AuthService", () => {
     prisma.user.findUnique.mockResolvedValue({
       id: "user_123",
       email: "person@example.com",
+      role: "ADMIN",
       passwordHash
     });
     const service = new AuthService(prisma as never, passwordService, tokenService);
@@ -91,6 +95,7 @@ describe("AuthService", () => {
 
     expect(result.accessToken).toBe("access-token");
     expect(result.user.email).toBe("person@example.com");
+    expect(result.user.role).toBe("ADMIN");
     expect(prisma.auditLog.create).toHaveBeenCalledWith({
       data: {
         userId: "user_123",
@@ -118,5 +123,25 @@ describe("AuthService", () => {
         password: "wrong-password"
       })
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it("returns the current user with role", async () => {
+    const prisma = createPrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: "user_123",
+      email: "person@example.com",
+      role: "ADMIN"
+    });
+    const service = new AuthService(prisma as never, passwordService, tokenService);
+
+    await expect(service.getCurrentUser("user_123")).resolves.toEqual({
+      id: "user_123",
+      email: "person@example.com",
+      role: "ADMIN"
+    });
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: "user_123" },
+      select: { id: true, email: true, role: true }
+    });
   });
 });

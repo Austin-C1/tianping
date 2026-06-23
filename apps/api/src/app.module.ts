@@ -14,7 +14,8 @@ import { WalletsModule } from "./wallets/wallets.module";
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true
+      isGlobal: true,
+      envFilePath: [".env.local", ".env", "../../.env.local", "../../.env"]
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],

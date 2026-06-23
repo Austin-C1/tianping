@@ -28,9 +28,10 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: {
         email,
+        role: "USER",
         passwordHash
       },
-      select: { id: true, email: true, createdAt: true }
+      select: { id: true, email: true, role: true, createdAt: true }
     });
     await this.writeAuditLog(user.id, "auth.register", email);
 
@@ -61,7 +62,7 @@ export class AuthService {
   async getCurrentUser(userId: string): Promise<AuthUser> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true }
+      select: { id: true, email: true, role: true }
     });
 
     if (!user) {
@@ -75,11 +76,13 @@ export class AuthService {
     return {
       accessToken: this.tokenService.signAccessToken({
         userId: user.id,
-        email: user.email
+        email: user.email,
+        role: user.role
       }),
       user: {
         id: user.id,
-        email: user.email
+        email: user.email,
+        role: user.role
       }
     };
   }
