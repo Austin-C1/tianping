@@ -45,6 +45,7 @@ export function fetchAdminGates() {
 export interface MarketSyncResult {
   synced: number
   failed: number
+  error?: string
 }
 
 export function syncMarkets() {

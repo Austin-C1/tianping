@@ -122,7 +122,9 @@ async function handleMarketSync() {
 
   try {
     const result = await syncMarkets()
-    syncMessage.value = `已同步 ${result.synced} 个，失败 ${result.failed} 个`
+    syncMessage.value = result.error
+      ? `已同步 ${result.synced} 个，失败 ${result.failed} 个：${result.error}`
+      : `已同步 ${result.synced} 个，失败 ${result.failed} 个`
     await loadStatus()
   } catch (err) {
     error.value = err instanceof Error ? err.message : '同步市场失败'

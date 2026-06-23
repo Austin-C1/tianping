@@ -100,11 +100,29 @@ git -c http.proxy=http://127.0.0.1:7897 -c https.proxy=http://127.0.0.1:7897 pus
 
 修改 Docker Desktop 代理通常需要重启 Docker Desktop，重启会临时停止当前容器。
 
+## Polymarket 市场同步网络
+
+默认情况下，API 使用 Node `fetch` 访问 `https://gamma-api.polymarket.com`。
+
+如果 Windows 本地出现 PowerShell 能访问 Gamma API、但 Node/Nest 请求超时的情况，可以在 `.env` 中加入：
+
+```bash
+POLYMARKET_FETCH_MODE=powershell
+```
+
+然后重启 API：
+
+```bash
+npm run start:dev --workspace @pmx/api
+```
+
+这个配置只用于本地网络兼容。生产环境默认继续使用标准 `fetch`。
+
 ## 当前风险
 
 | 项目 | 说明 |
 |---|---|
 | Admin | 当前是 Vben v5 技术方向的精简后台，不是完整官方 Vben v5 monorepo |
-| Web | 市场数据仍是占位内容，真实 Polymarket 数据尚未接入 |
+| Web | 市场数据已接入只读 API；本地同步依赖 Gamma API 网络可达 |
 | 交易 | 真实 CLOB 提交默认未启用 |
 | 钱包 | 钱包绑定、Deposit Wallet、入金授权状态尚未完成 |
