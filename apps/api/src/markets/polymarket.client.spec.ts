@@ -47,6 +47,13 @@ describe("PolymarketClient", () => {
       (command, args, options, callback) => {
         expect(command).toMatch(/powershell|pwsh/);
         expect(args).toContain("-EncodedCommand");
+        const encodedCommand = args[args.indexOf("-EncodedCommand") + 1] as string;
+        const script = Buffer.from(encodedCommand, "base64").toString("utf16le");
+        expect(script).toContain("[Console]::OutputEncoding");
+        expect(script).toContain("[Text.UTF8Encoding]");
+        expect(script).toContain("[Net.WebRequest]::Create");
+        expect(script).toContain("[IO.StreamReader]::new");
+        expect(script).not.toContain("Invoke-WebRequest");
         expect(options).toEqual(expect.objectContaining({ timeout: 20_000 }));
         const done = callback as (error: Error | null, stdout: string, stderr: string) => void;
         done(

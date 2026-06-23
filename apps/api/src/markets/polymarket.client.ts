@@ -69,12 +69,16 @@ export class PolymarketClient {
   }
 
   private async fetchWithPowerShell(url: URL): Promise<GammaEventSource[] | PolymarketMarketSource[]> {
-    const timeoutSeconds = Math.max(1, Math.ceil(this.timeoutMs / 1000));
     const script = [
       "$ErrorActionPreference = 'Stop'",
+      "$OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)",
       "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
-      `$response = Invoke-WebRequest -UseBasicParsing -Uri ${this.powerShellString(String(url))} -TimeoutSec ${timeoutSeconds}`,
-      "$response.Content"
+      `$request = [Net.WebRequest]::Create(${this.powerShellString(String(url))})`,
+      "$request.Method = 'GET'",
+      "$request.UserAgent = 'pmx-local-dev/0.1'",
+      `$request.Timeout = ${this.timeoutMs}`,
+      "$response = $request.GetResponse()",
+      "try { $stream = $response.GetResponseStream(); $reader = [IO.StreamReader]::new($stream, [Text.UTF8Encoding]::new($false)); try { $reader.ReadToEnd() } finally { $reader.Dispose() } } finally { $response.Dispose() }"
     ].join("; ");
     const encodedCommand = Buffer.from(script, "utf16le").toString("base64");
     const command = process.platform === "win32" ? "powershell.exe" : "pwsh";

@@ -3,15 +3,16 @@ import { expect, test } from "@playwright/test";
 test("shows the product trading workspace", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "PMX Trading" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "市场筛选" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "市场浏览" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "市场详情" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "市场" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "精选市场" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "热门市场" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "交易准备" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "订单预览" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "订单票据" })).toBeVisible();
   await expect(page.getByText("钱包未连接")).toBeVisible();
   await expect(page.getByText("Deposit Wallet 未创建")).toBeVisible();
   await expect(page.getByRole("button", { name: "人工确认 Gate" })).toBeDisabled();
+  await expect(page.getByText("国旗轮转")).toHaveCount(0);
+  await expect(page.getByText("实时投注金额")).toHaveCount(0);
 });
 
 test("lets the user switch the web app to English", async ({ page }) => {
@@ -22,8 +23,8 @@ test("lets the user switch the web app to English", async ({ page }) => {
     .getByRole("button", { name: "EN", exact: true })
     .click();
 
-  await expect(page.getByRole("heading", { name: "Market filters" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Market overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Featured markets" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Top markets" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Trade readiness" })).toBeVisible();
   await expect(page.getByText("Wallet not connected")).toBeVisible();
   await expect(page.getByRole("link", { name: "Register" })).toBeVisible();
