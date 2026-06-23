@@ -1,4 +1,5 @@
 import { MANUAL_GATES, PLATFORM_PHASES } from "@pmx/shared";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -10,6 +11,11 @@ export default function Home() {
           当前版本只建立基础前后端平台、数据库、队列、测试和人工 Gate。
           真实 CLOB 下单、Relayer 权限和入金文案在人工确认后进入后续阶段。
         </p>
+        <div className="actions">
+          <Link href="/register">注册</Link>
+          <Link href="/login">登录</Link>
+          <Link href="/account">账户</Link>
+        </div>
 
         <section className="grid" aria-label="Project status">
           <article className="panel">

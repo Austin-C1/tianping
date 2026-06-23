@@ -25,6 +25,10 @@ main {
   margin: 0 auto;
 }
 
+.narrow {
+  max-width: 680px;
+}
+
 .eyebrow {
   color: #2563eb;
   font-size: 14px;
@@ -52,6 +56,78 @@ p {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin-top: 32px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.actions a,
+button {
+  min-height: 42px;
+  border: 1px solid #111827;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.actions a:nth-child(2),
+.actions a:nth-child(3) {
+  background: #ffffff;
+  color: #111827;
+}
+
+.auth-form {
+  border: 1px solid #d7dae0;
+  border-radius: 8px;
+  background: #ffffff;
+  margin-top: 28px;
+  padding: 24px;
+}
+
+.auth-form h2 {
+  margin: 0 0 20px;
+  font-size: 22px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #111827;
+  font: inherit;
+}
+
+.auth-form p[role="status"] {
+  margin: 16px 0 0;
+  font-size: 15px;
+}
+
+.account-panel {
+  margin-top: 28px;
 }
 
 .panel {
