@@ -6,6 +6,7 @@ export interface AuthCredentials {
 export interface AuthUser {
   id: string;
   email: string;
+  role?: string;
 }
 
 export interface AuthResult {

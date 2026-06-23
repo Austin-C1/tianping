@@ -32,6 +32,23 @@ describe("AccountPanel", () => {
     expect(await screen.findByText("person@example.com")).toBeInTheDocument();
   });
 
+  it("shows account, wallet, deposit wallet, balance, and risk sections", async () => {
+    vi.spyOn(authClient, "readAccessToken").mockReturnValue("token");
+    vi.spyOn(authClient, "getCurrentUser").mockResolvedValue({
+      id: "user_123",
+      email: "person@example.com"
+    });
+
+    renderAccountPanel();
+
+    expect(await screen.findByText("person@example.com")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "钱包状态" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Deposit Wallet" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "资金与授权" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "风控状态" })).toBeInTheDocument();
+  });
+
+
   it("uses persisted English account copy", async () => {
     window.localStorage.setItem("pmx.locale", "en");
     vi.spyOn(authClient, "readAccessToken").mockReturnValue(null);

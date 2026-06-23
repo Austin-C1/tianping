@@ -57,8 +57,43 @@ describe("Home", () => {
       await screen.findAllByText("艾哈迈德·沙拉会在 2027 年前成为下一位下台的领导人吗？")
     ).toHaveLength(3);
     expect(screen.getAllByText("政治").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "是 0c" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "否 100c" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "是 0c" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "否 100c" })).toBeInTheDocument();
+  });
+
+  it("links market cards and outcome prices to the market detail page", async () => {
+    window.localStorage.setItem("pmx.locale", "en");
+    fetchMarketsMock.mockResolvedValue([
+      {
+        id: "snapshot_1",
+        marketId: "market_1",
+        slug: "spread-colombia-dr-congo",
+        question: "Spread: Colombia (-5.5)",
+        category: "Sports",
+        active: true,
+        closed: false,
+        outcomes: ["Colombia", "DR Congo"],
+        outcomePrices: ["0.01", "0.99"],
+        volume: "746",
+        liquidity: "16729",
+        syncedAt: "2026-06-24T00:00:00.000Z"
+      }
+    ]);
+
+    renderHome();
+
+    expect(await screen.findByRole("link", { name: "Spread: Colombia (-5.5)" })).toHaveAttribute(
+      "href",
+      "/markets/market_1"
+    );
+    expect(screen.getByRole("link", { name: "Colombia 1c" })).toHaveAttribute(
+      "href",
+      "/markets/market_1?side=yes"
+    );
+    expect(screen.getByRole("link", { name: "DR Congo 99c" })).toHaveAttribute(
+      "href",
+      "/markets/market_1?side=no"
+    );
   });
 
   it("switches the trading workspace to English", () => {

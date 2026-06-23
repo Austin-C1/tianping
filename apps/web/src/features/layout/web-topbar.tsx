@@ -38,8 +38,8 @@ export function WebTopbar() {
         </Link>
         <nav aria-label={messages.common.marketNav} className="market-nav">
           <Link href="/">{messages.common.markets}</Link>
-          <Link href="/account">{messages.common.portfolio}</Link>
-          <Link href="/account">{messages.common.activity}</Link>
+          <Link href="/portfolio">{messages.common.portfolio}</Link>
+          <Link href="/activity">{messages.common.activity}</Link>
         </nav>
       </div>
       <label className="topbar-search">

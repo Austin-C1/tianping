@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import type { Route } from "next";
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../features/i18n/language-provider";
 import type { HomeMessages } from "../features/i18n/messages";
@@ -179,40 +181,34 @@ export default function Home() {
                     <span>{market.category}</span>
                     <small>{market.source.active && !market.source.closed ? copy.open : copy.readOnlyPreview}</small>
                   </div>
-                  <h3>{market.question}</h3>
+                  <h3>
+                    <Link href={getMarketHref(market.source.marketId)}>{market.question}</Link>
+                  </h3>
                   <div className="market-meta">
                     <span>{copy.volume}: {formatUsd(market.source.volume)}</span>
                     <span>{copy.liquidity}: {formatUsd(market.source.liquidity)}</span>
                   </div>
                   <div className="outcome-buttons" aria-label={copy.orderDirection}>
-                    <button
+                    <Link
                       className={
                         market.source.id === selectedMarket.source.id && orderSide === "yes"
                           ? "yes active"
                           : "yes"
                       }
-                      type="button"
-                      onClick={() => {
-                        setSelectedMarketId(market.source.id);
-                        setOrderSide("yes");
-                      }}
+                      href={getMarketHref(market.source.marketId, "yes")}
                     >
                       {market.outcomes[0] ?? localizeOutcome("Yes", locale)} {market.prices[0] ? `${toCents(market.prices[0])}c` : "--"}
-                    </button>
-                    <button
+                    </Link>
+                    <Link
                       className={
                         market.source.id === selectedMarket.source.id && orderSide === "no"
                           ? "no active"
                           : "no"
                       }
-                      type="button"
-                      onClick={() => {
-                        setSelectedMarketId(market.source.id);
-                        setOrderSide("no");
-                      }}
+                      href={getMarketHref(market.source.marketId, "no")}
                     >
                       {market.outcomes[1] ?? localizeOutcome("No", locale)} {market.prices[1] ? `${toCents(market.prices[1])}c` : "--"}
-                    </button>
+                    </Link>
                   </div>
                 </article>
               ))}
@@ -226,18 +222,17 @@ export default function Home() {
             </div>
             <div className="top-market-list">
               {visibleMarkets.slice(0, 5).map((market) => (
-                <button
+                <Link
                   className={market.source.id === selectedMarket.source.id ? "top-market-row active" : "top-market-row"}
                   key={market.source.id}
-                  type="button"
-                  onClick={() => setSelectedMarketId(market.source.id)}
+                  href={getMarketHref(market.source.marketId)}
                 >
                   <span>{market.category}</span>
                   <strong>{market.question}</strong>
                   <small>
                     {(market.outcomes[0] ?? localizeOutcome("Yes", locale))} {market.prices[0] ? `${toCents(market.prices[0])}c` : "--"}
                   </small>
-                </button>
+                </Link>
               ))}
             </div>
           </section>
@@ -375,4 +370,10 @@ function formatEstimatedCost(value: string): string {
   }
 
   return `$${(numeric * 100).toFixed(2)}`;
+}
+
+function getMarketHref(marketId: string, side?: OrderSide): Route {
+  const baseHref = `/markets/${encodeURIComponent(marketId)}`;
+
+  return (side ? `${baseHref}?side=${side}` : baseHref) as Route;
 }

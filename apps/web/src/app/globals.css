@@ -568,7 +568,151 @@ p {
 }
 
 .account-panel {
+  display: grid;
+  gap: 18px;
   margin-top: 28px;
+}
+
+.account-summary {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.account-summary p {
+  margin: 0;
+}
+
+.account-summary span,
+.account-status-card span {
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.account-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.account-status-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.account-status-card div,
+.account-ledger div {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.account-status-card h2,
+.account-ledger h2 {
+  color: #111827;
+  font-size: 17px;
+  margin: 0;
+}
+
+.account-status-card p {
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.account-ledger {
+  border-top: 1px solid #e5e7eb;
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+}
+
+.account-ledger span {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.account-ledger strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.portfolio-shell {
+  padding-top: 56px;
+}
+
+.portfolio-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.portfolio-grid section {
+  background: #ffffff;
+  border: 1px solid #d7dae0;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+}
+
+.portfolio-grid span,
+.activity-list span,
+.activity-list time {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.portfolio-grid strong {
+  color: #111827;
+  font-size: 22px;
+}
+
+.portfolio-positions {
+  margin-top: 16px;
+}
+
+.activity-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.activity-list article {
+  border-bottom: 1px solid #e5e7eb;
+  display: grid;
+  gap: 6px;
+  padding-bottom: 12px;
+}
+
+.activity-list article:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.activity-list strong {
+  color: #111827;
+  font-size: 16px;
+}
+
+.activity-list p {
+  font-size: 14px;
+  margin: 0;
 }
 
 .panel {
@@ -913,15 +1057,20 @@ p {
   grid-template-columns: 1fr 1fr;
 }
 
+.outcome-buttons a,
 .outcome-buttons button,
 .ticket-toggle button {
+  align-items: center;
   border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
+  display: inline-flex;
   font: inherit;
   font-size: 14px;
   font-weight: 900;
+  justify-content: center;
   min-height: 42px;
+  text-decoration: none;
 }
 
 .outcome-buttons .yes,
@@ -936,6 +1085,7 @@ p {
   color: #b91c1c;
 }
 
+.outcome-buttons a.active,
 .outcome-buttons button.active,
 .ticket-toggle button.active {
   border-color: #111827;
@@ -963,6 +1113,7 @@ p {
   min-height: 62px;
   padding: 10px 0;
   text-align: left;
+  text-decoration: none;
 }
 
 .top-market-row.active strong {
@@ -1020,8 +1171,159 @@ p {
   margin: 0;
 }
 
+.amount-field {
+  display: grid;
+  gap: 7px;
+}
+
+.amount-field span {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.amount-field input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #111827;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  min-height: 44px;
+  padding: 0 12px;
+  width: 100%;
+}
+
 .readiness-card .readiness-list {
   margin-top: 0;
+}
+
+.detail-shell {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  margin: 0 auto;
+  max-width: 1320px;
+  padding: 18px 24px 28px;
+}
+
+.market-detail-main {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.text-link {
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.market-detail-hero {
+  align-items: flex-start;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding: 24px;
+}
+
+.market-detail-hero h1 {
+  font-size: 38px;
+  line-height: 1.08;
+  margin: 8px 0;
+  max-width: 920px;
+}
+
+.market-detail-hero p {
+  color: #4b5563;
+  font-size: 15px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 760px;
+}
+
+.detail-stats,
+.market-info-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.detail-stats div,
+.market-info-grid section {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.detail-stats span {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.detail-stats strong {
+  color: #111827;
+  font-size: 18px;
+}
+
+.order-book-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.order-book-row {
+  align-items: center;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 0 14px;
+  text-decoration: none;
+}
+
+.order-book-row.yes {
+  background: #dcfce7;
+  color: #047857;
+}
+
+.order-book-row.no {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.order-book-row strong {
+  font-size: 18px;
+}
+
+.market-info-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.market-info-grid h2 {
+  color: #111827;
+  font-size: 18px;
+  margin: 0;
+}
+
+.market-info-grid p {
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.detail-ticket-pane {
+  align-self: start;
+  position: sticky;
+  top: 86px;
 }
 
 @media (max-width: 1180px) {
@@ -1075,6 +1377,18 @@ p {
 
   .market-price {
     justify-items: start;
+  }
+
+  .detail-shell,
+  .detail-stats,
+  .market-info-grid,
+  .account-grid,
+  .portfolio-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-ticket-pane {
+    position: static;
   }
 }
 
