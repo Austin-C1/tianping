@@ -1,0 +1,26 @@
+{
+  "name": "polymarket-trading-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Non-custodial Polymarket third-party base trading platform.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace @pmx/web\" \"npm run start:dev --workspace @pmx/api\"",
+    "build": "npm run build --workspace @pmx/shared && npm run build --workspace @pmx/api && npm run build --workspace @pmx/web",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "playwright test",
+    "prisma:generate": "npm run prisma:generate --workspace @pmx/api",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest",
+    "concurrently": "latest",
+    "typescript": "latest"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

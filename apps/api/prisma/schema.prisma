@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WalletType {
+  EOA
+  DEPOSIT
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderStatus {
+  PREVIEWED
+  SIGNED
+  SUBMITTED
+  OPEN
+  PARTIALLY_FILLED
+  FILLED
+  CANCEL_REQUESTED
+  CANCELLED
+  REJECTED
+  FAILED
+}
+
+model User {
+  id              String            @id @default(cuid())
+  email           String            @unique
+  passwordHash    String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  wallets         Wallet[]
+  orders          Order[]
+  trades          Trade[]
+  positions       Position[]
+  auditLogs       AuditLog[]
+  rateLimitEvents RateLimitEvent[]
+}
+
+model Wallet {
+  id        String     @id @default(cuid())
+  userId    String
+  type      WalletType
+  address   String
+  chainId   Int
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, address, chainId])
+  @@index([address])
+}
+
+model MarketSnapshot {
+  id          String   @id @default(cuid())
+  marketId    String   @unique
+  slug        String?
+  question    String
+  active      Boolean
+  closed      Boolean
+  raw         Json
+  syncedAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
+  trades      Trade[]
+  positions   Position[]
+}
+
+model Order {
+  id              String          @id @default(cuid())
+  userId          String
+  marketSnapshotId String?
+  clobOrderId     String?         @unique
+  side            OrderSide
+  status          OrderStatus     @default(PREVIEWED)
+  price           Decimal         @db.Decimal(18, 8)
+  size            Decimal         @db.Decimal(18, 8)
+  signedPayload   Json?
+  submittedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketSnapshot  MarketSnapshot? @relation(fields: [marketSnapshotId], references: [id])
+  trades          Trade[]
+
+  @@index([userId, status])
+}
+
+model Trade {
+  id              String          @id @default(cuid())
+  userId          String
+  orderId         String?
+  marketSnapshotId String?
+  clobTradeId     String?         @unique
+  side            OrderSide
+  price           Decimal         @db.Decimal(18, 8)
+  size            Decimal         @db.Decimal(18, 8)
+  raw             Json?
+  executedAt      DateTime
+  createdAt       DateTime        @default(now())
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order           Order?          @relation(fields: [orderId], references: [id])
+  marketSnapshot  MarketSnapshot? @relation(fields: [marketSnapshotId], references: [id])
+
+  @@index([userId, executedAt])
+}
+
+model Position {
+  id              String          @id @default(cuid())
+  userId          String
+  marketSnapshotId String?
+  outcome         String
+  size            Decimal         @db.Decimal(18, 8)
+  averagePrice    Decimal         @db.Decimal(18, 8)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketSnapshot  MarketSnapshot? @relation(fields: [marketSnapshotId], references: [id])
+
+  @@unique([userId, marketSnapshotId, outcome])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  ipAddress String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+}
+
+model RateLimitEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  key       String
+  route     String
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([key, createdAt])
+  @@index([userId, createdAt])
+}
