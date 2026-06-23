@@ -1,25 +1,9 @@
-import App from './App.vue'
+import Antd from 'ant-design-vue'
+import { createPinia } from 'pinia'
 import { createApp } from 'vue'
-import { initStore } from './store'                 // Store
-import { initRouter } from './router'               // Router
-import language from './locales'                    // 国际化
-import '@styles/core/tailwind.css'                  // tailwind
-import '@styles/index.scss'                         // 样式
-import '@utils/sys/console.ts'                      // 控制台输出内容
-import { setupGlobDirectives } from './directives'
-import { setupErrorHandle } from './utils/sys/error-handle'
+import 'ant-design-vue/dist/reset.css'
+import App from './App.vue'
+import { router } from './router'
+import './styles/app.css'
 
-document.addEventListener(
-  'touchstart',
-  function () {},
-  { passive: false }
-)
-
-const app = createApp(App)
-initStore(app)
-initRouter(app)
-setupGlobDirectives(app)
-setupErrorHandle(app)
-
-app.use(language)
-app.mount('#app')
+createApp(App).use(createPinia()).use(router).use(Antd).mount('#app')

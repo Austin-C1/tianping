@@ -1,0 +1,199 @@
+:root {
+  color: #182230;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.admin-shell {
+  min-height: 100vh;
+}
+
+.admin-sider {
+  background: #111827 !important;
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 72px;
+  padding: 0 20px;
+  color: #ffffff;
+}
+
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: #111827;
+  background: #8dd8b8;
+  font-weight: 800;
+}
+
+.brand-copy {
+  display: grid;
+  line-height: 1.2;
+}
+
+.brand-copy small {
+  color: #9ca3af;
+}
+
+.admin-menu {
+  border-inline-end: 0 !important;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 72px;
+  padding: 0 28px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.admin-header h1,
+.toolbar h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.admin-content {
+  padding: 28px;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.user-email {
+  color: #475467;
+}
+
+.page-stack {
+  display: grid;
+  gap: 20px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metric-card span,
+.metric-card small {
+  display: block;
+  color: #667085;
+}
+
+.metric-card strong {
+  display: block;
+  margin: 10px 0 4px;
+  color: #101828;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.login-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(141, 216, 184, 0.28), transparent 28%),
+    linear-gradient(135deg, #f5f7fb 0%, #eef4f8 52%, #f7f1e8 100%);
+}
+
+.login-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 44px;
+  width: min(880px, 100%);
+  padding: 44px;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 20px 50px rgba(16, 24, 40, 0.12);
+}
+
+.login-copy {
+  align-self: center;
+}
+
+.login-copy h1 {
+  margin: 0 0 16px;
+  font-size: 44px;
+  line-height: 1;
+}
+
+.login-copy p,
+.placeholder-copy {
+  margin: 0;
+  color: #475467;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.form-alert {
+  margin-bottom: 16px;
+}
+
+.mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .metric-grid,
+  .login-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-header,
+  .toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    height: auto;
+    padding-block: 18px;
+  }
+
+  .admin-content {
+    padding: 18px;
+  }
+}

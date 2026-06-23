@@ -15,7 +15,17 @@ describe("UsersService", () => {
         id: "user_123",
         email: "person@example.com",
         role: "USER",
-        createdAt: new Date("2026-06-23T00:00:00.000Z")
+        createdAt: new Date("2026-06-23T00:00:00.000Z"),
+        wallets: [
+          {
+            address: "0x123",
+            chainId: 137,
+            type: "EOA"
+          }
+        ],
+        _count: {
+          wallets: 1
+        }
       }
     ]);
     const service = new UsersService(prisma as never);
@@ -25,7 +35,10 @@ describe("UsersService", () => {
         id: "user_123",
         email: "person@example.com",
         role: "USER",
-        createdAt: new Date("2026-06-23T00:00:00.000Z")
+        createdAt: new Date("2026-06-23T00:00:00.000Z"),
+        walletCount: 1,
+        walletStatus: "CONNECTED",
+        primaryWalletAddress: "0x123"
       }
     ]);
     expect(prisma.user.findMany).toHaveBeenCalledWith({
@@ -34,7 +47,21 @@ describe("UsersService", () => {
         id: true,
         email: true,
         role: true,
-        createdAt: true
+        createdAt: true,
+        wallets: {
+          orderBy: { createdAt: "desc" },
+          select: {
+            address: true,
+            chainId: true,
+            type: true
+          },
+          take: 1
+        },
+        _count: {
+          select: {
+            wallets: true
+          }
+        }
       },
       take: 100
     });

@@ -8,9 +8,9 @@
     "start:dev": "nest start --watch",
     "build": "nest build",
     "test": "jest --runInBand",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "db:seed": "ts-node prisma/seed.ts"
+    "prisma:generate": "node scripts/with-root-env.cjs prisma generate",
+    "prisma:migrate": "node scripts/with-root-env.cjs prisma migrate dev",
+    "db:seed": "node scripts/with-root-env.cjs ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "latest",

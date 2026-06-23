@@ -14,15 +14,43 @@ export class UsersService {
       throw new ForbiddenException("Admin role is required");
     }
 
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
         email: true,
         role: true,
-        createdAt: true
+        createdAt: true,
+        wallets: {
+          orderBy: { createdAt: "desc" },
+          select: {
+            address: true,
+            chainId: true,
+            type: true
+          },
+          take: 1
+        },
+        _count: {
+          select: {
+            wallets: true
+          }
+        }
       },
       take: 100
+    });
+
+    return users.map((user) => {
+      const primaryWallet = user.wallets[0];
+
+      return {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        walletCount: user._count.wallets,
+        walletStatus: user._count.wallets > 0 ? "CONNECTED" : "NOT_CONNECTED",
+        primaryWalletAddress: primaryWallet?.address ?? null
+      };
     });
   }
 }
