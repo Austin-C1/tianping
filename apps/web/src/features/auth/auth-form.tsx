@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useLanguage } from "../i18n/language-provider";
 import { login, register, saveAccessToken } from "./auth-client";
 
 type AuthMode = "login" | "register";
@@ -10,14 +11,16 @@ interface AuthFormProps {
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
+  const { messages } = useLanguage();
+  const copy = messages.auth;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isRegister = mode === "register";
-  const title = isRegister ? "注册账户" : "登录账户";
-  const buttonText = isRegister ? "注册" : "登录";
+  const title = isRegister ? copy.createAccount : copy.loginTitle;
+  const buttonText = isRegister ? copy.registerButton : copy.loginButton;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,9 +32,11 @@ export function AuthForm({ mode }: AuthFormProps) {
         ? await register({ email, password })
         : await login({ email, password });
       saveAccessToken(result.accessToken);
-      setMessage(isRegister ? `已注册并登录：${result.user.email}` : `已登录：${result.user.email}`);
+      setMessage(
+        `${isRegister ? copy.registerSuccess : copy.loginSuccess}${result.user.email}`
+      );
     } catch {
-      setMessage(isRegister ? "注册失败" : "登录失败");
+      setMessage(isRegister ? copy.registerFailed : copy.loginFailed);
     } finally {
       setIsSubmitting(false);
     }
@@ -41,7 +46,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     <form className="auth-form" onSubmit={handleSubmit}>
       <h2>{title}</h2>
       <label>
-        Email
+        {copy.email}
         <input
           autoComplete="email"
           name="email"
@@ -52,7 +57,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         />
       </label>
       <label>
-        Password
+        {copy.password}
         <input
           autoComplete={isRegister ? "new-password" : "current-password"}
           minLength={8}
@@ -64,7 +69,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         />
       </label>
       <button disabled={isSubmitting} type="submit">
-        {isSubmitting ? "处理中" : buttonText}
+        {isSubmitting ? copy.processing : buttonText}
       </button>
       {message ? <p role="status">{message}</p> : null}
     </form>

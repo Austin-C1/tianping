@@ -8,10 +8,11 @@ import UsersView from '@/views/UsersView.vue'
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/auth/login',
+    path: '/login',
     name: 'Login',
+    alias: '/auth/login',
     component: LoginView,
-    meta: { public: true, title: 'Login' }
+    meta: { public: true, title: '登录' }
   },
   {
     path: '/',
@@ -22,21 +23,21 @@ const routes: RouteRecordRaw[] = [
         path: 'dashboard',
         name: 'Dashboard',
         component: DashboardView,
-        meta: { title: 'Dashboard' }
+        meta: { title: '仪表盘' }
       },
       {
         path: 'users',
         name: 'Users',
         component: UsersView,
-        meta: { title: 'Users' }
+        meta: { title: '用户' }
       },
       {
         path: 'markets',
         name: 'Markets',
         component: PlaceholderView,
         meta: {
-          title: 'Markets',
-          description: 'Read-only Polymarket market sync and status checks.'
+          title: '市场',
+          description: '只读 Polymarket 市场同步和状态检查。'
         }
       },
       {
@@ -44,8 +45,8 @@ const routes: RouteRecordRaw[] = [
         name: 'Orders',
         component: PlaceholderView,
         meta: {
-          title: 'Orders',
-          description: 'Order previews, CLOB status, and failure review will appear here.'
+          title: '订单',
+          description: '订单预览、CLOB 状态和失败排查会在这里显示。'
         }
       },
       {
@@ -53,8 +54,8 @@ const routes: RouteRecordRaw[] = [
         name: 'Audit',
         component: PlaceholderView,
         meta: {
-          title: 'Audit',
-          description: 'Critical auth, wallet, and order actions are tracked before trading opens.'
+          title: '审计',
+          description: '真实交易开放前，关键认证、钱包和订单动作都会留痕。'
         }
       },
       {
@@ -62,8 +63,8 @@ const routes: RouteRecordRaw[] = [
         name: 'Risk',
         component: PlaceholderView,
         meta: {
-          title: 'Risk',
-          description: 'Manual gates, region limits, and rate-limit events will be reviewed here.'
+          title: '风险',
+          description: '人工关口、地区限制和限流事件会在这里审核。'
         }
       },
       {
@@ -71,8 +72,8 @@ const routes: RouteRecordRaw[] = [
         name: 'Settings',
         component: PlaceholderView,
         meta: {
-          title: 'Settings',
-          description: 'Operational settings stay read-only until production controls are defined.'
+          title: '设置',
+          description: '生产控制规则定义前，运营设置保持只读。'
         }
       }
     ]
@@ -105,17 +106,17 @@ router.beforeEach(async (to) => {
   }
 
   if (!auth.isAuthenticated) {
-    return { path: '/auth/login', query: { redirect: to.fullPath } }
+    return { path: '/login', query: { redirect: to.fullPath } }
   }
 
   if (!auth.user) {
     try {
       await auth.loadCurrentUser()
     } catch {
-      return { path: '/auth/login', query: { redirect: to.fullPath } }
+      return { path: '/login', query: { redirect: to.fullPath } }
     }
   }
 
-  document.title = `${String(to.meta.title || 'Admin')} - PMX Admin`
+  document.title = `${String(to.meta.title || '管理员')} - PMX 管理员`
   return true
 })

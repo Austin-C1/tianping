@@ -1,12 +1,20 @@
+"use client";
+
 import { AuthForm } from "../../features/auth/auth-form";
+import { useLanguage } from "../../features/i18n/language-provider";
+import { WebTopbar } from "../../features/layout/web-topbar";
 
 export default function LoginPage() {
+  const { messages } = useLanguage();
+  const copy = messages.auth;
+
   return (
     <main>
+      <WebTopbar />
       <div className="shell narrow">
-        <div className="eyebrow">Stage 2 / User System</div>
-        <h1>登录账户</h1>
-        <p>登录后可以进入受保护账户页。真实交易功能会在后续人工 Gate 后开启。</p>
+        <div className="eyebrow">{copy.stageEyebrow}</div>
+        <h1>{copy.loginTitle}</h1>
+        <p>{copy.loginIntro}</p>
         <AuthForm mode="login" />
       </div>
     </main>

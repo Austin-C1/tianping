@@ -1,12 +1,20 @@
+"use client";
+
 import { AuthForm } from "../../features/auth/auth-form";
+import { useLanguage } from "../../features/i18n/language-provider";
+import { WebTopbar } from "../../features/layout/web-topbar";
 
 export default function RegisterPage() {
+  const { messages } = useLanguage();
+  const copy = messages.auth;
+
   return (
     <main>
+      <WebTopbar />
       <div className="shell narrow">
-        <div className="eyebrow">Stage 2 / User System</div>
-        <h1>注册账户</h1>
-        <p>创建平台账户后，后续阶段才能绑定钱包、创建 Deposit Wallet 和查看订单记录。</p>
+        <div className="eyebrow">{copy.stageEyebrow}</div>
+        <h1>{copy.createAccount}</h1>
+        <p>{copy.registerIntro}</p>
         <AuthForm mode="register" />
       </div>
     </main>

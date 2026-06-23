@@ -2,6 +2,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { AuthModule } from "./auth/auth.module";
+import { AdminModule } from "./admin/admin.module";
 import { ComplianceModule } from "./compliance/compliance.module";
 import { HealthController } from "./health.controller";
 import { JobsModule } from "./jobs/jobs.module";
@@ -29,6 +30,7 @@ import { WalletsModule } from "./wallets/wallets.module";
     PrismaModule,
     JobsModule,
     AuthModule,
+    AdminModule,
     UsersModule,
     MarketsModule,
     WalletsModule,

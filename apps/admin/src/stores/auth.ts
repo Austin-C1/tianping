@@ -24,7 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function signIn(email: string, password: string) {
     const result = await login({ email, password })
     if (result.user.role !== 'ADMIN') {
-      throw new Error('Admin role is required')
+      throw new Error('需要管理员权限')
     }
 
     setToken(result.accessToken)
@@ -39,7 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
     const currentUser = await getCurrentUser()
     if (currentUser.role !== 'ADMIN') {
       clearSession()
-      throw new Error('Admin role is required')
+      throw new Error('需要管理员权限')
     }
 
     user.value = currentUser

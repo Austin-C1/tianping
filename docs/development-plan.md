@@ -1,187 +1,88 @@
-# Development Plan
+# PMX 开发计划
 
-## 总体验收目标
+## 当前基线
 
-用户可以完整走通：
-
-注册 -> 浏览市场 -> 绑定钱包 -> 创建交易钱包 -> 入金/授权 -> 预览订单 -> 签名下单 -> 查看订单 -> 撤单或成交 -> 查看持仓。
-
-## 阶段 1：工程骨架
-
-| 项目 | 内容 |
+| 项目 | 状态 |
 |---|---|
-| 前端做什么 | 创建 Next.js 前台、接入 Art Design Pro 管理后台、建立基础页面和测试入口 |
-| 后端做什么 | 创建 NestJS 应用、健康检查、模块目录、Prisma、BullMQ 配置 |
-| 技术 | Next.js、React、Vue 3、Vite、Element Plus、NestJS、Prisma、PostgreSQL、Redis、BullMQ、Jest、Vitest、Playwright |
-| 配置或权限 | 本地 `.env`、Docker PostgreSQL/Redis；不需要 Polymarket 权限 |
-| 如何测试 | `npm install`、`npm run prisma:generate`、`npm run build`、`npm test`、`npm run test:e2e` |
-| 通过标准 | 前台、后台、后端都能构建；健康检查可用；docs 固化范围和 Gate |
-| 人工确认 | 不需要 |
+| Web | `http://localhost:3000` 可访问，当前是交易工作台原型 |
+| Admin | `http://localhost:3001/#/dashboard` 可访问，已使用 Vue 3 + Vite + Pinia + Vue Router + Ant Design Vue 的 Vben v5 方向实现 |
+| API | `http://localhost:4000/health` 可访问，返回 `ok: true` |
+| 数据库 | PostgreSQL + Prisma 已用于真实注册、登录、用户列表 |
+| Redis | 已作为 BullMQ 和后续限流/同步状态基础服务 |
+| 已跑通 | 注册、登录、账户页、管理员登录、后台用户列表 |
+| 未完成 | 完整官方 Vben v5 工程接入、真实 Polymarket 市场数据、钱包绑定、Deposit Wallet、订单预览、CLOB 下单 |
 
-## 阶段 2：用户系统
+## 总方向
 
-| 项目 | 内容 |
+| 项目 | 决策 |
 |---|---|
-| 前端做什么 | 注册、登录、退出、会话状态、受保护页面 |
-| 后端做什么 | 用户模型、密码哈希、JWT、刷新策略、基础权限守卫、审计登录事件 |
-| 技术 | NestJS Auth Guard、JWT、scrypt/argon2、Prisma |
-| 配置或权限 | JWT secret、密码策略、会话过期策略 |
-| 如何测试 | 注册/登录 API 集成测试、Web 表单测试、认证守卫测试 |
-| 通过标准 | 用户可注册登录；未登录不能访问受保护资源 |
-| 人工确认 | 密码策略和用户协议文案需要确认 |
+| 前台 Web | 继续使用 Next.js，首页就是交易工作台，不做营销页 |
+| 后台 Admin | 继续按 Vben v5 技术方向建设后台，优先补齐权限、菜单、运营页面和真实 API |
+| 后端 API | 保留 NestJS + Prisma + PostgreSQL + Redis + BullMQ |
+| 当前优先级 | 先稳定本地闭环和后台，再重构前台，再接只读市场数据，最后处理钱包和交易 |
+| 默认不做 | 不托管用户资金，不代签订单，不自动提交真实 CLOB，不做收费功能 |
 
-## 阶段 2.5：管理后台基线
+## 阶段顺序
 
-| 项目 | 内容 |
+| 顺序 | 阶段 | 目标 | 验收 |
+|---:|---|---|---|
+| 0 | 基线回归 | 确认本地三端、DB、Redis、测试都可用 | 三个网址可打开；`npm run build`、`npm test`、`npm run test:e2e` 通过 |
+| 1 | 文档校准 | 文档和当前代码状态一致 | `docs` 中不再出现过期后台方案描述，中文显示正常 |
+| 2 | Admin 正式 Vben 化 | 后台登录、权限、布局、菜单稳定 | ADMIN 可进后台，USER 被拒绝，Users 页读取真实 API |
+| 3 | Admin 真实运营页 | Markets、Orders、Audit、Risk、Settings 不再只是占位 | 后台显示真实 API 状态、空状态、同步状态和人工 Gate |
+| 4 | Web Product Design 重构 | 前台变成清晰交易工作台 | 市场、钱包、交易准备、订单预览、人工 Gate 首屏可见 |
+| 5 | Polymarket 只读市场数据 | 接公开市场数据，不交易 | 前台显示真实市场，后台显示同步时间和失败原因 |
+| 6 | 钱包绑定 | 用户连接 EVM 钱包并签名证明归属 | 账户页和后台用户页都能看到钱包绑定状态 |
+| 7 | Deposit Wallet | 查询/创建非托管 Deposit Wallet | 用户能看到 Deposit Wallet 地址、状态、失败原因 |
+| 8 | 入金与授权引导 | 展示资金路径、余额、授权状态和风险 | 用户清楚入金地址、授权对象和下一步 |
+| 9 | 订单预览 | 下单前完整校验，不提交真实 CLOB | 价格、数量、成本、余额、地区限制、人工 Gate 都可验 |
+| 10 | CLOB mock 签名链路 | 用户签名后先提交到 mock provider | 订单进入本地 DB，后台能看到状态和失败原因 |
+| 11 | 小额真实 CLOB 测试 | 人工确认后进行小额真实链路测试 | 指定市场、金额上限、撤单、状态同步全部通过 |
+| 12 | 风控与内测收口 | geoblock、rate limit、audit log 完整化 | 关键动作留痕，受限操作被拦截，后台可排查 |
+
+## 最近三步
+
+| 顺序 | 任务 | 原因 | 验收 |
+|---:|---|---|---|
+| 1 | Admin 正式 Vben 化 | 后台是后续市场、订单、审计和风控入口 | Admin 登录、权限、菜单、用户页真实可用 |
+| 2 | Web Product Design 重构 | 前台需要先有正确产品形态，再接真实数据 | Playwright 验证核心布局、注册入口、市场搜索、订单预览 |
+| 3 | Polymarket 只读市场数据 | 先接只读数据，避免过早碰真实交易风险 | 前台展示真实市场，后台能看到同步状态 |
+
+## 每阶段统一验收
+
+每个阶段完成后都要尽量执行：
+
+```bash
+npm run build
+npm test
+npm run test:e2e
+```
+
+浏览器检查：
+
+| 页面 | 检查 |
 |---|---|
-| 前端做什么 | 将 Art Design Pro 改成 PMX Admin，保留其布局、菜单、登录、权限、表格和路由架构，替换为 dashboard、用户、市场、订单、audit、risk 模块 |
-| 后端做什么 | 复用 `/auth/login` 和 `/auth/me`，登录结果包含用户角色，后台只接受 ADMIN |
-| 技术 | Vue 3、Vite、Element Plus、Pinia、Art Design Pro、NestJS auth API |
-| 配置或权限 | `VITE_API_PROXY_URL=http://localhost:4000`；管理端账号权限后续需要人工定义 |
-| 如何测试 | `npm run build --workspace @pmx/admin`，登录接口映射检查 |
-| 通过标准 | 管理端能构建，菜单只保留 PMX 运营模块，不再暴露模板 demo |
-| 人工确认 | 管理端角色、权限、可操作范围需要确认 |
+| `http://localhost:3000` | Web 首页和核心交互 |
+| `http://localhost:3001/#/dashboard` | Admin 登录态、菜单、真实数据 |
+| `http://localhost:4000/health` | API 健康状态 |
 
-## 阶段 2.6：本地可用基线
+必须保持：
 
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 注册/登录页面显示真实 API 结果；账户页读取当前用户；管理端登录走 NestJS API |
-| 后端做什么 | 固化 `.env` 加载、CORS、管理员 seed、用户角色、后台用户接口 |
-| 技术 | NestJS、Prisma、PostgreSQL、Redis、Art Design Pro API proxy |
-| 配置或权限 | PostgreSQL 5432、Redis 6379、`ADMIN_EMAIL`、`ADMIN_PASSWORD` |
-| 如何测试 | `npm run build`、`npm test`、API `/health`、注册/登录浏览器验证、后台管理员登录 |
-| 通过标准 | API 能启动；前台注册和登录能写库；后台 `admin@pmx.local` 能登录并看到用户列表 |
-| 人工确认 | 如果 Docker 镜像拉取失败，需要确认是否允许重启 Docker Desktop 或改用外部数据库 |
-
-## 阶段 3：Polymarket 市场数据
-
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 市场列表、搜索、筛选、市场详情页 |
-| 后端做什么 | 接入 Gamma/CLOB 市场数据，缓存热门市场，同步市场快照 |
-| 技术 | NestJS HTTP client、BullMQ、Redis cache、Prisma |
-| 配置或权限 | Polymarket API base URL、请求频率策略 |
-| 如何测试 | API mock 集成测试、列表/详情 Playwright 测试 |
-| 通过标准 | 用户能浏览、搜索、打开市场详情 |
-| 人工确认 | 市场展示字段和风险提示文案需要审核 |
-
-## 阶段 4：钱包连接
-
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 连接 EVM 钱包、展示钱包地址、断开连接、签名能力检查 |
-| 后端做什么 | 记录用户钱包绑定关系，验证钱包签名归属 |
-| 技术 | wagmi/viem 或同类 EVM 钱包库、NestJS、Prisma |
-| 配置或权限 | Chain、RPC、钱包连接供应商配置 |
-| 如何测试 | 钱包连接组件测试、签名验证集成测试 |
-| 通过标准 | 用户能绑定并证明钱包所有权 |
-| 人工确认 | 支持的钱包、链和 RPC 供应商需要确认 |
-
-## 阶段 5：Deposit Wallet
-
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 查询/创建 Deposit Wallet，展示状态和地址 |
-| 后端做什么 | 调用 Polymarket 相关接口查询/创建非托管 Deposit Wallet，记录映射状态 |
-| 技术 | Polymarket wallet/relayer API、NestJS、Prisma |
-| 配置或权限 | Relayer / CLOB / Builder 权限、API 凭证 |
-| 如何测试 | API mock、状态同步测试、失败重试测试 |
-| 通过标准 | 用户能看到自己的 Deposit Wallet 状态和创建结果 |
-| 人工确认 | 必须确认 Relayer、CLOB、Builder 相关权限和调用方式 |
-
-## 阶段 6：入金引导
-
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 入金步骤、授权提示、余额状态、风险提示 |
-| 后端做什么 | 查询余额/授权状态，记录用户查看和确认行为 |
-| 技术 | viem、Polymarket API、Prisma audit log |
-| 配置或权限 | Token、链、合约地址、授权策略 |
-| 如何测试 | 入金流程 Playwright mock、余额查询集成测试 |
-| 通过标准 | 用户知道入金地址、授权对象、交易风险和下一步操作 |
-| 人工确认 | 地区限制、风险提示、入金文案必须人工审核 |
-
-## 阶段 7：订单预览
-
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 买卖方向、价格、数量、预计成本、滑点/失败提示、人工确认弹窗 |
-| 后端做什么 | 校验市场状态、价格、余额、地区限制，返回待签名订单摘要 |
-| 技术 | NestJS validation、Prisma、Polymarket CLOB quote/order schema |
-| 配置或权限 | CLOB order 参数和市场规则 |
-| 如何测试 | 订单预览单元测试、异常价格/余额不足/受限地区测试 |
-| 通过标准 | 真实下单前必须出现确认页，用户能看清交易路径 |
-| 人工确认 | 真实下单确认文案和风控规则需要审核 |
-
-## 阶段 8：用户签名下单
-
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 调用钱包签名订单，展示签名结果和提交状态 |
-| 后端做什么 | 验证签名、校验订单摘要一致性、转发到 CLOB |
-| 技术 | viem、NestJS、Polymarket CLOB client |
-| 配置或权限 | CLOB 下单权限、Relayer 设置 |
-| 如何测试 | 签名验证测试、CLOB mock 下单测试、失败重试测试 |
-| 通过标准 | 用户签名后，订单进入 CLOB 并写入本地订单记录 |
-| 人工确认 | 接入真实 CLOB 前必须人工确认权限和小额真实测试范围 |
-
-## 阶段 9：CLOB 撤单和订单状态
-
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 订单列表、订单详情、撤单按钮、状态刷新 |
-| 后端做什么 | CLOB 撤单、订单状态同步、幂等处理 |
-| 技术 | BullMQ、Prisma、Polymarket CLOB API |
-| 配置或权限 | CLOB 撤单权限和状态轮询频率 |
-| 如何测试 | 撤单集成测试、订单状态同步测试 |
-| 通过标准 | 用户能撤销未成交订单，订单状态和 CLOB 一致 |
-| 人工确认 | 真实撤单测试范围需要确认 |
-
-## 阶段 10：持仓与历史
-
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 持仓、成交记录、订单历史、筛选和详情 |
-| 后端做什么 | 同步成交和持仓，关联市场和订单，提供查询接口 |
-| 技术 | Prisma、BullMQ、NestJS query API |
-| 配置或权限 | 持仓来源和同步频率 |
-| 如何测试 | 成交同步测试、持仓计算测试、历史查询测试 |
-| 通过标准 | 用户能看到订单、成交、当前持仓和历史记录 |
-| 人工确认 | 持仓展示口径需要确认 |
-
-## 阶段 11：风控与合规
-
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 地区限制提示、风险确认、受限操作拦截 |
-| 后端做什么 | geoblock、rate limit、audit log、敏感操作留痕 |
-| 技术 | NestJS guard/interceptor、Redis、Prisma |
-| 配置或权限 | 国家/地区规则、限流参数、日志保留策略 |
-| 如何测试 | geoblock 测试、rate limit 测试、audit log 测试 |
-| 通过标准 | 受限地区无法交易；关键操作有日志；高频请求被限制 |
-| 人工确认 | 地区限制规则、风险提示、日志保留策略必须审核 |
-
-## 阶段 12：内测验收
-
-| 项目 | 内容 |
-|---|---|
-| 前端做什么 | 修正主流程体验、错误提示、空状态、加载状态 |
-| 后端做什么 | 稳定同步任务、补齐监控日志、核对异常处理 |
-| 技术 | Playwright、Jest、Vitest、日志和监控工具 |
-| 配置或权限 | 内测用户、测试市场、小额真实交易范围 |
-| 如何测试 | 注册到持仓完整 E2E；CLOB 小额真实下单/撤单；异常路径回归 |
-| 通过标准 | 验收目标完整走通，真实下单前人工确认生效 |
-| 人工确认 | 内测名单、真实交易金额、地区限制和风险文案最终确认 |
+- 注册、登录、账户页不被破坏。
+- 普通 USER 不能进入 Admin。
+- ADMIN 能进入 Admin 并看到真实用户数据。
+- 真实 CLOB 提交默认关闭。
+- 未经过人工确认，不启用真实交易 provider。
 
 ## 人工 Gate
 
-| Gate | 触发点 | 需要确认 |
+| Gate | 触发点 | 必须确认 |
 |---|---|---|
-| G1 | 接入真实 Polymarket 权限前 | Relayer、CLOB、Builder 权限和调用责任 |
-| G2 | 创建 Deposit Wallet 前 | 非托管 Deposit Wallet 调用方式和用户提示 |
-| G3 | 入金引导上线前 | 地区限制、风险提示、入金文案 |
-| G4 | 真实下单前 | 人工确认弹窗、订单摘要、交易路径展示 |
-| G5 | 小额真实交易前 | 测试市场、金额上限、失败处理预案 |
-| G6 | 内测前 | 内测用户、合规规则、日志保留和客服流程 |
-| G7 | 管理后台开放前 | 管理员角色、权限范围、可执行操作白名单 |
+| G1 | 接完整官方 Vben v5 monorepo 前 | 是否接受 pnpm、monorepo 和大量模板迁移成本 |
+| G2 | 接真实 Polymarket 数据前 | 市场字段、展示口径、失败重试策略 |
+| G3 | 钱包连接上线前 | 支持的钱包、链、RPC 服务商 |
+| G4 | Deposit Wallet 调真实 API 前 | Relayer、Builder、CLOB 权限和调用方式 |
+| G5 | 入金引导上线前 | 地区限制、风险提示、入金文案 |
+| G6 | 真实订单提交前 | 人工确认文案、金额上限、测试市场 |
+| G7 | 小额真实交易前 | CLOB 权限、金额上限、失败处理预案 |
+| G8 | 内测前 | 内测名单、日志保留、风控规则 |

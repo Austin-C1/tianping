@@ -4,9 +4,40 @@ test("shows the product trading workspace", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "PMX Trading" })).toBeVisible();
-  await expect(page.getByText("市场浏览")).toBeVisible();
-  await expect(page.getByText("订单预览")).toBeVisible();
-  await expect(page.getByText("人工确认 Gate")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "市场筛选" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "市场浏览" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "市场详情" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "交易准备" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "订单预览" })).toBeVisible();
+  await expect(page.getByText("钱包未连接")).toBeVisible();
+  await expect(page.getByText("Deposit Wallet 未创建")).toBeVisible();
+  await expect(page.getByRole("button", { name: "人工确认 Gate" })).toBeDisabled();
+});
+
+test("lets the user switch the web app to English", async ({ page }) => {
+  await page.goto("/");
+
+  await page
+    .getByRole("group", { name: "界面语言" })
+    .getByRole("button", { name: "EN", exact: true })
+    .click();
+
+  await expect(page.getByRole("heading", { name: "Market filters" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Market overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Trade readiness" })).toBeVisible();
+  await expect(page.getByText("Wallet not connected")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Register" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Register" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Create account" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create account" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Login" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Account" }).click();
+  await expect(page.getByRole("heading", { name: "Account center" })).toBeVisible();
+  await expect(page.getByText("Please sign in first")).toBeVisible();
 });
 
 test("shows the stage 2 auth pages", async ({ page }) => {

@@ -2,10 +2,10 @@
   <section class="page-stack">
     <div class="toolbar">
       <div>
-        <span class="eyebrow">Database users</span>
-        <h2>Users</h2>
+        <span class="eyebrow">数据库用户</span>
+        <h2>用户</h2>
       </div>
-      <AButton :loading="loading" type="primary" @click="loadUsers">Refresh</AButton>
+      <AButton :loading="loading" type="primary" @click="loadUsers">刷新</AButton>
     </div>
 
     <AAlert v-if="error" :message="error" show-icon type="error" />
@@ -20,11 +20,13 @@
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'role'">
-            <ATag :color="record.role === 'ADMIN' ? 'red' : 'blue'">{{ record.role }}</ATag>
+            <ATag :color="record.role === 'ADMIN' ? 'red' : 'blue'">
+              {{ record.role === 'ADMIN' ? '管理员' : '用户' }}
+            </ATag>
           </template>
           <template v-else-if="column.key === 'walletStatus'">
             <ATag :color="record.walletStatus === 'CONNECTED' ? 'green' : 'default'">
-              {{ record.walletStatus === 'CONNECTED' ? 'Connected' : 'Not connected' }}
+              {{ record.walletStatus === 'CONNECTED' ? '已连接' : '未连接' }}
             </ATag>
           </template>
           <template v-else-if="column.key === 'createdAt'">
@@ -48,12 +50,12 @@ const error = ref('')
 const users = ref<ManagedUser[]>([])
 
 const columns = [
-  { title: 'Email', dataIndex: 'email', key: 'email' },
-  { title: 'Role', dataIndex: 'role', key: 'role', width: 120 },
-  { title: 'Wallet status', dataIndex: 'walletStatus', key: 'walletStatus', width: 160 },
-  { title: 'Wallets', dataIndex: 'walletCount', key: 'walletCount', width: 110 },
-  { title: 'Primary wallet', dataIndex: 'primaryWalletAddress', key: 'primaryWalletAddress' },
-  { title: 'Created', dataIndex: 'createdAt', key: 'createdAt', width: 220 }
+  { title: '邮箱', dataIndex: 'email', key: 'email' },
+  { title: '角色', dataIndex: 'role', key: 'role', width: 120 },
+  { title: '钱包状态', dataIndex: 'walletStatus', key: 'walletStatus', width: 160 },
+  { title: '钱包数', dataIndex: 'walletCount', key: 'walletCount', width: 110 },
+  { title: '主钱包', dataIndex: 'primaryWalletAddress', key: 'primaryWalletAddress' },
+  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 220 }
 ]
 
 async function loadUsers() {
@@ -63,7 +65,7 @@ async function loadUsers() {
   try {
     users.value = await fetchAdminUsers()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load users'
+    error.value = err instanceof Error ? err.message : '加载用户失败'
   } finally {
     loading.value = false
   }

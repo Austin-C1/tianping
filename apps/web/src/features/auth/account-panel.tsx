@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "../i18n/language-provider";
 import { clearAccessToken, getCurrentUser, readAccessToken, type AuthUser } from "./auth-client";
 
 type AccountState =
@@ -10,6 +11,8 @@ type AccountState =
   | { status: "error" };
 
 export function AccountPanel() {
+  const { messages } = useLanguage();
+  const copy = messages.auth;
   const [state, setState] = useState<AccountState>({ status: "loading" });
 
   useEffect(() => {
@@ -24,20 +27,20 @@ export function AccountPanel() {
   }, []);
 
   if (state.status === "loading") {
-    return <p>加载账户信息</p>;
+    return <p>{copy.loadingAccount}</p>;
   }
 
   if (state.status === "anonymous") {
-    return <p>请先登录</p>;
+    return <p>{copy.signInFirst}</p>;
   }
 
   if (state.status === "error") {
-    return <p>账户信息读取失败，请重新登录</p>;
+    return <p>{copy.readAccountFailed}</p>;
   }
 
   return (
     <section className="panel account-panel">
-      <h2>账户</h2>
+      <h2>{copy.accountPanelTitle}</h2>
       <p>{state.user.email}</p>
       <button
         type="button"
@@ -46,7 +49,7 @@ export function AccountPanel() {
           setState({ status: "anonymous" });
         }}
       >
-        退出登录
+        {copy.signOut}
       </button>
     </section>
   );

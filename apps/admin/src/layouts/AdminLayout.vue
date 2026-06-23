@@ -4,8 +4,8 @@
       <RouterLink class="brand" to="/dashboard">
         <span class="brand-mark">P</span>
         <span class="brand-copy">
-          <strong>PMX Admin</strong>
-          <small>Operations</small>
+          <strong>PMX 管理员</strong>
+          <small>运营</small>
         </span>
       </RouterLink>
 
@@ -22,14 +22,14 @@
     <ALayout>
       <ALayoutHeader class="admin-header">
         <div>
-          <span class="eyebrow">Admin workspace</span>
+          <span class="eyebrow">管理工作区</span>
           <h1>{{ pageTitle }}</h1>
         </div>
 
         <ASpace :size="16">
-          <ATag color="green">ADMIN</ATag>
+          <ATag color="green">管理员</ATag>
           <span class="user-email">{{ auth.user?.email }}</span>
-          <AButton @click="handleSignOut">Sign out</AButton>
+          <AButton @click="handleSignOut">退出</AButton>
         </ASpace>
       </ALayoutHeader>
 
@@ -59,13 +59,13 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const menuItems = [
-  { key: '/dashboard', icon: () => h(DashboardOutlined), label: 'Dashboard' },
-  { key: '/users', icon: () => h(TeamOutlined), label: 'Users' },
-  { key: '/markets', icon: () => h(LineChartOutlined), label: 'Markets' },
-  { key: '/orders', icon: () => h(ShoppingCartOutlined), label: 'Orders' },
-  { key: '/audit', icon: () => h(AuditOutlined), label: 'Audit' },
-  { key: '/risk', icon: () => h(SafetyCertificateOutlined), label: 'Risk' },
-  { key: '/settings', icon: () => h(SettingOutlined), label: 'Settings' }
+  { key: '/dashboard', icon: () => h(DashboardOutlined), label: '仪表盘' },
+  { key: '/users', icon: () => h(TeamOutlined), label: '用户' },
+  { key: '/markets', icon: () => h(LineChartOutlined), label: '市场' },
+  { key: '/orders', icon: () => h(ShoppingCartOutlined), label: '订单' },
+  { key: '/audit', icon: () => h(AuditOutlined), label: '审计' },
+  { key: '/risk', icon: () => h(SafetyCertificateOutlined), label: '风险' },
+  { key: '/settings', icon: () => h(SettingOutlined), label: '设置' }
 ]
 
 const selectedKey = computed(() => {
@@ -73,7 +73,7 @@ const selectedKey = computed(() => {
   return match?.key || '/dashboard'
 })
 
-const pageTitle = computed(() => String(route.meta.title || 'Dashboard'))
+const pageTitle = computed(() => String(route.meta.title || '仪表盘'))
 
 function handleMenuClick({ key }: { key: string }) {
   router.push(key)
@@ -81,6 +81,6 @@ function handleMenuClick({ key }: { key: string }) {
 
 function handleSignOut() {
   auth.clearSession()
-  router.replace('/auth/login')
+  router.replace('/login')
 }
 </script>

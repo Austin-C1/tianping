@@ -1,85 +1,86 @@
-# Architecture
+# PMX 架构说明
 
 ## 项目目标
 
-开发一个 Polymarket 三方基础交易平台。当前阶段不做盈利功能，只做基础前后端平台和真实交易闭环。
+PMX 是一个非托管 Polymarket 第三方交易工作台。
 
-第一版使用非托管 Deposit Wallet。用户资金不进入平台账户，用户订单必须由用户钱包签名，后端只做校验、路由和状态同步。
+第一阶段目标不是盈利，也不是托管用户资产，而是建立一条可验证的真实交易准备链路：
 
-## 当前范围
+注册 -> 登录 -> 浏览市场 -> 绑定钱包 -> 创建或查询 Deposit Wallet -> 入金/授权检查 -> 订单预览 -> 用户签名 -> API 校验 -> CLOB 提交 -> 订单、成交、持仓同步。
 
-| 类型 | 内容 |
-|---|---|
-| 必须做 | Next.js 前台、Art Design Pro 管理后台、NestJS 后端、PostgreSQL + Prisma、Redis + BullMQ、用户注册/登录、市场列表/搜索/详情、Polymarket 市场数据接入、钱包连接、Deposit Wallet 查询/创建、入金引导、下单预览、用户签名下单、CLOB 下单/撤单、订单/成交/持仓记录、geoblock、rate limit、audit log、Playwright + 单元/集成测试 |
-| 明确不做 | Builder fee、广告、会员、数据售卖、平台托管钱包、多用户订单合并、内部撮合、自动跟单 |
-| 关键边界 | 不合并多个用户订单；不隐藏交易路径；真实下单前需要人工确认；Relayer / CLOB / Builder 权限相关事项需要人工确认；地区限制、风险提示、入金文案需要人工审核 |
+真实 CLOB 下单必须放在最后，并且需要人工 Gate。
 
 ## 应用分层
 
 | 层 | 路径 | 职责 |
 |---|---|---|
-| Web | `apps/web` | 面向交易用户的产品前台。负责注册/登录入口、市场浏览、钱包连接、Deposit Wallet、入金引导、订单预览、签名确认、订单/成交/持仓展示 |
-| Admin | `apps/admin` | 基于 Art Design Pro 的运营管理后台。负责用户、市场同步、订单状态、风控 Gate、audit log 和人工确认事项管理 |
-| API | `apps/api` | NestJS API。负责认证、权限校验、Polymarket 数据代理、Deposit Wallet 状态查询、订单校验与路由、CLOB 状态同步、风控、审计日志 |
-| Shared | `packages/shared` | 跨前后端共享的阶段、人工 Gate、基础类型和常量 |
-| Database | `apps/api/prisma/schema.prisma` | 用户、钱包、市场快照、订单、成交、持仓、审计日志、限流事件 |
-| Queue | `apps/api/src/jobs` | 市场数据同步、订单状态同步、成交/持仓同步、审计类异步任务 |
-| Docs | `docs` | 架构约束、开发阶段、人工确认点和验收标准 |
+| Web | `apps/web` | 面向交易用户的 Next.js 前台。负责市场浏览、账户状态、钱包连接、Deposit Wallet、入金引导、订单预览、签名确认、订单和持仓展示 |
+| Admin | `apps/admin` | 面向运营和风控的 Vue 3 + Vite 后台。当前按 Vben v5 技术方向建设，使用 Pinia、Vue Router、Ant Design Vue |
+| API | `apps/api` | NestJS 后端。负责认证、权限、Prisma 数据访问、市场数据代理、订单校验、钱包状态、审计和风控 |
+| Shared | `packages/shared` | 前后端共享的阶段、Gate、类型和常量 |
+| Database | `apps/api/prisma/schema.prisma` | PostgreSQL schema，保存用户、角色、钱包、市场快照、订单、审计日志等 |
+| Queue | `apps/api/src/jobs` | BullMQ 队列，后续负责市场同步、订单同步、成交和持仓同步 |
+| Docs | `docs` | 架构边界、开发计划、本地运行和验收标准 |
+
+## 当前技术栈
+
+| 技术 | 用途 |
+|---|---|
+| Next.js + React | 用户交易前台 |
+| Vue 3 + Vite | 管理后台 |
+| Pinia | Admin 状态管理 |
+| Vue Router | Admin 路由和权限守卫 |
+| Ant Design Vue | Admin UI 组件 |
+| NestJS | 后端 API 和模块边界 |
+| Prisma | PostgreSQL schema、迁移和数据访问 |
+| PostgreSQL | 用户、钱包、市场、订单、审计等持久化数据 |
+| Redis | BullMQ、后续限流和同步状态 |
+| BullMQ | 异步市场、订单、成交、持仓同步 |
+| Jest | API 单元测试 |
+| Vitest | Web 单元测试 |
+| Playwright | 浏览器端 E2E 验收 |
 
 ## 前台与后台边界
 
 | 应用 | 面向对象 | 可以做 | 不可以做 |
 |---|---|---|---|
-| Web | 交易用户 | 浏览市场、绑定钱包、创建/查询 Deposit Wallet、预览订单、发起钱包签名、查看订单和持仓 | 代签订单、隐藏交易路径、托管资金、绕过人工确认 |
-| Admin | 运营/风控人员 | 查看用户和订单状态、触发市场同步、检查 audit log、维护人工 Gate 状态、辅助内测验收 | 代替用户签名、合并用户订单、内部撮合、直接操作用户资金 |
+| Web | 交易用户 | 注册、登录、浏览市场、绑定钱包、查看 Deposit Wallet、预览订单、发起钱包签名、查看订单和持仓 | 代替用户签名、隐藏交易路径、托管资金、绕过人工确认 |
+| Admin | 运营/风控人员 | 查看用户、市场同步、订单状态、风险事件、审计日志、人工 Gate 状态 | 代签订单、合并用户订单、内部撮合、直接操作用户资金 |
+| API | 系统后端 | 校验权限、校验订单、代理数据、保存状态、同步 CLOB 状态、记录审计日志 | 保存用户私钥、代签真实订单、绕过用户钱包签名 |
 
 ## 数据流
 
-1. Web 从 API 读取市场列表、详情、用户订单、成交和持仓。
-2. API 从 Polymarket Gamma/CLOB 接入市场、订单和成交相关数据。
-3. 用户连接自有钱包，Web 引导用户创建或查询非托管 Deposit Wallet。
-4. 用户在 Web 做下单预览，API 返回校验后的交易路径、价格、数量、费用说明、风险提示和待签名内容。
-5. 用户在钱包中签名订单，API 只接收已签名订单并转发到 CLOB。
-6. API 通过 BullMQ 同步订单状态、成交记录和持仓变化，写入 PostgreSQL。
-7. Admin 读取 API 中的运营数据，用于人工 Gate、风控检查和审计，不参与签名或托管资金。
-8. geoblock、rate limit、audit log 在 API 层执行，并对关键行为留痕。
+1. Web 通过 API 读取市场、账户、钱包、订单和持仓状态。
+2. API 通过 Prisma 读写 PostgreSQL。
+3. Redis 和 BullMQ 用于异步同步和后续限流。
+4. 市场数据阶段只接 Polymarket 公开数据，不交易。
+5. 钱包阶段由用户连接自己的 EVM 钱包，并签名证明地址归属。
+6. Deposit Wallet 阶段只查询或创建非托管 Deposit Wallet，平台不托管资金。
+7. 订单预览阶段只返回校验结果、风险提示和待签名摘要，不提交 CLOB。
+8. 用户签名后，API 只校验签名和订单摘要，再转发到 CLOB。
+9. Admin 只读取运营数据和风险状态，不参与签名和资金控制。
 
 ## 安全与合规边界
 
 | 项目 | 规则 |
 |---|---|
-| 资金托管 | 平台不托管用户资金，资金不进入平台账户 |
-| 订单签名 | 真实下单必须由用户钱包签名，后端不得代签 |
-| 订单路由 | 后端只做校验、路由和状态同步，不做内部撮合 |
-| 用户订单 | 不合并多个用户订单，不做自动跟单 |
-| 交易路径 | 前台必须展示真实交易路径和风险提示，不隐藏关键步骤 |
-| 地区限制 | geoblock 策略、风险提示、入金文案必须人工审核 |
-| 权限事项 | Relayer、CLOB、Builder 相关权限必须人工确认后才能进入真实交易实现 |
+| 资金托管 | 平台不托管用户资金，用户资金不进入平台账户 |
+| 私钥 | 平台不接触、不保存用户私钥 |
+| 订单签名 | 真实下单必须由用户钱包签名 |
+| 订单路由 | API 只做校验、路由和状态同步 |
+| 交易路径 | Web 必须展示交易路径、费用、风险和人工确认 Gate |
+| 地区限制 | geoblock 策略上线前必须人工确认 |
+| 审计 | 登录、钱包绑定、Deposit Wallet、入金状态、订单预览、真实提交、撤单等关键动作必须留痕 |
+| 真实交易 | 没有人工确认 CLOB 权限、市场、金额上限前，不启用真实 provider |
 
-## 技术骨架
-
-| 技术 | 用途 |
-|---|---|
-| Next.js | 用户交易前台 |
-| Vue 3 + Vite + Element Plus | Art Design Pro 管理后台 |
-| NestJS | 后端 API、模块边界、依赖注入 |
-| Prisma | PostgreSQL schema、迁移和数据库访问 |
-| PostgreSQL | 持久化用户、钱包、订单、成交、持仓、审计 |
-| Redis | 队列、限流和异步状态同步依赖 |
-| BullMQ | 市场数据、订单状态、成交和持仓同步任务 |
-| Playwright | 浏览器端主流程验收，使用 Microsoft Edge |
-| Jest | NestJS 单元和集成测试 |
-| Vitest | Web 前台单元测试 |
-
-## 当前阶段完成标准
+## 当前完成标准
 
 | 项目 | 判断标准 |
 |---|---|
-| 工程骨架 | 根目录 npm workspaces 可安装依赖，`apps/web`、`apps/admin`、`apps/api`、`packages/shared` 存在 |
-| 前台 | Next.js 首页可构建，展示交易产品界面、市场浏览、订单预览和人工 Gate |
-| 后台 | Art Design Pro 管理端可构建，已替换为平台 dashboard、用户、市场、订单、audit、risk 模块 |
-| 后端 | NestJS 可构建，`/health` 可返回运行状态 |
-| 数据库 | Prisma schema 包含第一版核心实体，可执行 generate |
-| 队列 | BullMQ 连接配置和队列名称固化 |
-| 文档 | 架构范围、阶段、人工确认点、验收目标固化到 `docs` |
-| 测试 | Web/API 单元测试入口和 Playwright 验收入口存在 |
+| 工程 | npm workspaces 能构建 Web、Admin、API、Shared |
+| Web | 首页显示交易工作台原型，注册、登录、账户页可用 |
+| Admin | 管理员可登录，普通用户被拒绝，Dashboard 和 Users 页读取真实 API |
+| API | `/health` 正常，auth 和 admin users API 可用 |
+| 数据库 | Prisma migration 和 seed 可执行 |
+| 队列 | BullMQ 基础模块存在，Redis 可用 |
+| 测试 | `npm run build`、`npm test`、`npm run test:e2e` 通过 |

@@ -69,8 +69,13 @@ model MarketSnapshot {
   marketId    String   @unique
   slug        String?
   question    String
+  category    String?
   active      Boolean
   closed      Boolean
+  outcomes    Json?
+  outcomePrices Json?
+  volume      Decimal? @db.Decimal(18, 8)
+  liquidity   Decimal? @db.Decimal(18, 8)
   raw         Json
   syncedAt    DateTime @default(now())
   createdAt   DateTime @default(now())

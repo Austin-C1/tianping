@@ -2,26 +2,26 @@
   <main class="login-screen">
     <section class="login-panel">
       <div class="login-copy">
-        <span class="eyebrow">PMX Admin</span>
-        <h1>Operations console</h1>
-        <p>Admin-only access for users, market sync, order previews, audit logs, and risk gates.</p>
+        <span class="eyebrow">PMX 管理员</span>
+        <h1>运营控制台</h1>
+        <p>仅管理员可访问用户管理、市场同步、订单预览、审计日志和风险关口。</p>
       </div>
 
       <AForm layout="vertical" :model="form" @finish="handleSubmit">
         <AAlert v-if="error" class="form-alert" :message="error" show-icon type="error" />
 
         <AFormItem
-          label="Email"
+          label="邮箱"
           name="email"
-          :rules="[{ required: true, message: 'Email is required' }]"
+          :rules="[{ required: true, message: '请输入邮箱' }]"
         >
           <AInput v-model:value="form.email" autocomplete="username" size="large" />
         </AFormItem>
 
         <AFormItem
-          label="Password"
+          label="密码"
           name="password"
-          :rules="[{ required: true, message: 'Password is required' }]"
+          :rules="[{ required: true, message: '请输入密码' }]"
         >
           <AInputPassword
             v-model:value="form.password"
@@ -31,7 +31,7 @@
         </AFormItem>
 
         <AButton block html-type="submit" :loading="loading" size="large" type="primary">
-          Sign in
+          登录
         </AButton>
       </AForm>
     </section>
@@ -63,7 +63,7 @@ async function handleSubmit() {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
     router.replace(redirect)
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Login failed'
+    error.value = err instanceof Error ? err.message : '登录失败'
   } finally {
     loading.value = false
   }

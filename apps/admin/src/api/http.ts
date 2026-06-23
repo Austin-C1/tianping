@@ -17,7 +17,7 @@ rawHttp.interceptors.request.use((config) => {
 
 function normalizeError(error: unknown): Error {
   if (!axios.isAxiosError(error)) {
-    return error instanceof Error ? error : new Error('Request failed')
+    return error instanceof Error ? error : new Error('请求失败')
   }
 
   const responseMessage = error.response?.data?.message
@@ -25,7 +25,21 @@ function normalizeError(error: unknown): Error {
     ? responseMessage.join(', ')
     : responseMessage || error.message
 
-  return new Error(message)
+  return new Error(localizeErrorMessage(message))
+}
+
+function localizeErrorMessage(message: string): string {
+  const knownMessages: Record<string, string> = {
+    'Admin role is required': '需要管理员权限',
+    'Bearer token is required': '需要登录后访问',
+    'Email is already registered': '邮箱已注册',
+    'Invalid access token': '登录已失效，请重新登录',
+    'Invalid email or password': '邮箱或密码错误',
+    'Request failed': '请求失败',
+    'User no longer exists': '用户不存在'
+  }
+
+  return knownMessages[message] ?? message
 }
 
 export async function get<T>(url: string): Promise<T> {
