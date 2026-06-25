@@ -6,7 +6,9 @@ export interface AdminSummary {
   adminUsers: number
   walletsConnected: number
   marketsSynced: number
+  latestMarketSyncedAt: string | null
   marketQuotesSynced: number
+  latestMarketQuoteSyncedAt: string | null
   ordersPreviewed: number
   openRiskEvents: number
 }
@@ -19,6 +21,19 @@ export interface AdminGate {
   owner: string
   status: AdminGateStatus
   updatedAt: string | null
+  details?: string | null
+}
+
+export type OrderRouterMode = 'preview' | 'paper' | 'live'
+
+export interface OrderRouterEnvironment {
+  mode: OrderRouterMode
+  clobHost: string
+  chainId: number | null
+  builderCodeConfigured: boolean
+  relayerConfigured: boolean
+  rpcConfigured: boolean
+  liveTradingEnabled: boolean
 }
 
 export interface ManagedUser {
@@ -41,6 +56,10 @@ export function fetchAdminSummary() {
 
 export function fetchAdminGates() {
   return get<AdminGate[]>('/admin/gates')
+}
+
+export function fetchAdminEnvironment() {
+  return get<OrderRouterEnvironment>('/admin/environment')
 }
 
 export interface MarketSyncResult {

@@ -27,6 +27,7 @@ export interface MarketQuoteItem {
   midpoint: string | null;
   spread: string | null;
   minOrderSize: string | null;
+  negRisk?: boolean;
   tickSize: string | null;
   syncedAt: string;
 }

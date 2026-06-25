@@ -16,4 +16,9 @@ export class AdminController {
   getGates(@Req() request: AuthenticatedRequest) {
     return this.adminService.getGates(request.user);
   }
+
+  @Get("environment")
+  getEnvironment(@Req() request: AuthenticatedRequest) {
+    return this.adminService.getEnvironment(request.user);
+  }
 }

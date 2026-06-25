@@ -18,6 +18,14 @@
       </ACard>
     </div>
 
+    <ACard title="Order Router 环境" :bordered="false">
+      <ADescriptions bordered :column="1" size="small">
+        <ADescriptionsItem v-for="item in environmentItems" :key="item.label" :label="item.label">
+          {{ item.value }}
+        </ADescriptionsItem>
+      </ADescriptions>
+    </ACard>
+
     <ACard title="人工关口" :bordered="false">
       <ATable :columns="gateColumns" :data-source="gateRows" :pagination="false" row-key="key" />
     </ACard>
@@ -27,16 +35,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
+  fetchAdminEnvironment,
   fetchAdminGates,
   fetchAdminSummary,
   type AdminGate,
-  type AdminSummary
+  type AdminSummary,
+  type OrderRouterEnvironment
 } from '@/api/admin'
 
 const loading = ref(false)
 const error = ref('')
 const summary = ref<AdminSummary | null>(null)
 const gates = ref<AdminGate[]>([])
+const environment = ref<OrderRouterEnvironment | null>(null)
 
 const metrics = computed(() => [
   {
@@ -60,6 +71,11 @@ const metrics = computed(() => [
     note: '只读市场快照'
   },
   {
+    label: 'marketQuotesSynced',
+    value: summary.value?.marketQuotesSynced ?? '-',
+    note: 'CLOB quote snapshots'
+  },
+  {
     label: '订单已预览',
     value: summary.value?.ordersPreviewed ?? '-',
     note: '不提交 CLOB'
@@ -71,8 +87,39 @@ const metrics = computed(() => [
   },
   {
     label: '交易模式',
-    value: '预览',
-    note: 'CLOB 提交已禁用'
+    value: routerModeLabel(environment.value?.mode),
+    note: environment.value?.liveTradingEnabled ? '真实 CLOB 提交已启用' : '真实 CLOB 提交已禁用'
+  }
+])
+
+const environmentItems = computed(() => [
+  {
+    label: 'ORDER_ROUTER_MODE',
+    value: routerModeLabel(environment.value?.mode)
+  },
+  {
+    label: 'POLYMARKET_CLOB_HOST',
+    value: environment.value?.clobHost ?? '-'
+  },
+  {
+    label: 'POLYMARKET_CHAIN_ID',
+    value: environment.value?.chainId ? String(environment.value.chainId) : '未配置'
+  },
+  {
+    label: 'builderCode',
+    value: configuredLabel(environment.value?.builderCodeConfigured)
+  },
+  {
+    label: 'relayer',
+    value: configuredLabel(environment.value?.relayerConfigured)
+  },
+  {
+    label: 'RPC',
+    value: configuredLabel(environment.value?.rpcConfigured)
+  },
+  {
+    label: 'liveTradingEnabled',
+    value: environment.value?.liveTradingEnabled ? '是' : '否'
   }
 ])
 
@@ -80,6 +127,7 @@ const gateColumns = [
   { title: '关口', dataIndex: 'title', key: 'title' },
   { title: '负责人', dataIndex: 'owner', key: 'owner' },
   { title: '状态', dataIndex: 'status', key: 'status' },
+  { title: '详情', dataIndex: 'detailsLabel', key: 'detailsLabel' },
   { title: '更新时间', dataIndex: 'updatedAtLabel', key: 'updatedAtLabel' }
 ]
 
@@ -89,6 +137,7 @@ const gateRows = computed(() =>
     owner: ownerLabel(gate.owner),
     status: statusLabel(gate.status),
     title: gateTitle(gate.key, gate.title),
+    detailsLabel: gate.details ?? '-',
     updatedAtLabel: formatDate(gate.updatedAt)
   }))
 )
@@ -97,12 +146,14 @@ async function loadOperations() {
   loading.value = true
   error.value = ''
   try {
-    const [nextSummary, nextGates] = await Promise.all([
+    const [nextSummary, nextGates, nextEnvironment] = await Promise.all([
       fetchAdminSummary(),
-      fetchAdminGates()
+      fetchAdminGates(),
+      fetchAdminEnvironment()
     ])
     summary.value = nextSummary
     gates.value = nextGates
+    environment.value = nextEnvironment
   } catch (err) {
     error.value = err instanceof Error ? err.message : '加载管理员概览失败'
   } finally {
@@ -112,6 +163,24 @@ async function loadOperations() {
 
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString() : '暂无'
+}
+
+function configuredLabel(value: boolean | undefined) {
+  if (value === undefined) {
+    return '-'
+  }
+
+  return value ? '已配置' : '未配置'
+}
+
+function routerModeLabel(value: OrderRouterEnvironment['mode'] | undefined) {
+  const labels: Record<OrderRouterEnvironment['mode'], string> = {
+    live: 'live',
+    paper: 'paper',
+    preview: 'preview'
+  }
+
+  return value ? labels[value] : '-'
 }
 
 function gateTitle(key: string, fallback: string) {

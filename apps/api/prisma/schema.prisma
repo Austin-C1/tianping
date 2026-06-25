@@ -36,18 +36,22 @@ enum UserRole {
 }
 
 model User {
-  id              String            @id @default(cuid())
-  email           String            @unique
-  role            UserRole          @default(USER)
-  passwordHash    String
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  wallets         Wallet[]
-  orders          Order[]
-  trades          Trade[]
-  positions       Position[]
-  auditLogs       AuditLog[]
-  rateLimitEvents RateLimitEvent[]
+  id                   String               @id @default(cuid())
+  email                String               @unique
+  role                 UserRole             @default(USER)
+  passwordHash         String
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  wallets              Wallet[]
+  orders               Order[]
+  trades               Trade[]
+  positions            Position[]
+  auditLogs            AuditLog[]
+  rateLimitEvents      RateLimitEvent[]
+  walletChallenges     WalletChallenge[]
+  depositWallets       DepositWallet[]
+  walletOperations     WalletOperation[]
+  relayerTransactions RelayerTransaction[]
 }
 
 model Wallet {
@@ -62,6 +66,86 @@ model Wallet {
 
   @@unique([userId, type, address, chainId])
   @@index([address])
+}
+
+model WalletChallenge {
+  id         String    @id @default(cuid())
+  userId     String
+  nonce      String    @unique
+  message    String
+  address    String?
+  chainId    Int?
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model DepositWallet {
+  id                        String               @id @default(cuid())
+  userId                    String
+  ownerAddress              String
+  address                   String?
+  chainId                   Int
+  status                    String
+  failureReason             String?
+  pUsdBalance               Decimal?             @db.Decimal(18, 8)
+  exchangeAllowance         Decimal?             @db.Decimal(18, 8)
+  balanceAllowanceUpdatedAt DateTime?
+  balanceAllowanceRaw       Json?
+  raw                       Json?
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+  user                      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  operations                WalletOperation[]
+  relayerTransactions       RelayerTransaction[]
+
+  @@unique([userId, ownerAddress, chainId])
+  @@index([address])
+  @@index([userId, status])
+}
+
+model WalletOperation {
+  id                   String               @id @default(cuid())
+  userId               String
+  depositWalletId      String?
+  type                 String
+  status               String
+  failureReason        String?
+  intentPayload        Json?
+  signedPayload        Json?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  depositWallet        DepositWallet?       @relation(fields: [depositWalletId], references: [id], onDelete: SetNull)
+  relayerTransactions RelayerTransaction[]
+
+  @@index([userId, type, status])
+  @@index([depositWalletId, updatedAt])
+}
+
+model RelayerTransaction {
+  id                   String    @id @default(cuid())
+  userId               String
+  depositWalletId      String?
+  walletOperationId    String?
+  relayerTransactionId String?
+  status               String
+  failureReason        String?
+  raw                  Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  depositWallet        DepositWallet? @relation(fields: [depositWalletId], references: [id], onDelete: SetNull)
+  walletOperation      WalletOperation? @relation(fields: [walletOperationId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([depositWalletId, updatedAt])
+  @@index([walletOperationId, updatedAt])
+  @@index([relayerTransactionId])
 }
 
 model MarketSnapshot {
@@ -103,6 +187,7 @@ model MarketQuoteSnapshot {
   midpoint         Decimal?       @db.Decimal(18, 8)
   spread           Decimal?       @db.Decimal(18, 8)
   minOrderSize     Decimal?       @db.Decimal(18, 8)
+  negRisk          Boolean        @default(false)
   tickSize         Decimal?       @db.Decimal(18, 8)
   orderBookHash    String?
   raw              Json?
@@ -120,10 +205,20 @@ model Order {
   userId          String
   marketSnapshotId String?
   clobOrderId     String?         @unique
+  tokenId         String?
+  outcome         String?
   side            OrderSide
+  orderType       String?
+  builderCode     String?
+  funderAddress   String?
+  signatureType   String?
+  clobStatus      String?
+  failureReason   String?
   status          OrderStatus     @default(PREVIEWED)
   price           Decimal         @db.Decimal(18, 8)
   size            Decimal         @db.Decimal(18, 8)
+  rawPreview      Json?
+  rawSignedOrder  Json?
   signedPayload   Json?
   submittedAt     DateTime?
   createdAt       DateTime        @default(now())
@@ -133,6 +228,7 @@ model Order {
   trades          Trade[]
 
   @@index([userId, status])
+  @@index([tokenId])
 }
 
 model Trade {

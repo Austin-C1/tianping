@@ -37,8 +37,65 @@ describe("PolymarketClient", () => {
 
     const requestedUrl = fetchMock.mock.calls[0]?.[0];
     expect(String(requestedUrl)).toBe(
-      "https://gamma-api.polymarket.com/events?active=true&closed=false&limit=3&order=volume24hr&ascending=false"
+      "https://gamma-api.polymarket.com/events?active=true&closed=false&limit=3&offset=0&order=volume24hr&ascending=false"
     );
+  });
+
+  it("paginates active Gamma events until the final short page", async () => {
+    const fetchMock = jest.spyOn(global, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          { id: "event_1", question: "Event 1?" },
+          { id: "event_2", question: "Event 2?" }
+        ]
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          { id: "event_3", question: "Event 3?" }
+        ]
+      } as Response);
+    const client = new PolymarketClient(config({ POLYMARKET_FETCH_MODE: "fetch" }));
+
+    await expect(client.fetchActiveMarkets(2)).resolves.toEqual([
+      { id: "event_1", question: "Event 1?" },
+      { id: "event_2", question: "Event 2?" },
+      { id: "event_3", question: "Event 3?" }
+    ]);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ search: "?active=true&closed=false&limit=2&offset=0&order=volume24hr&ascending=false" }),
+      expect.any(Object)
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ search: "?active=true&closed=false&limit=2&offset=2&order=volume24hr&ascending=false" }),
+      expect.any(Object)
+    );
+  });
+
+  it("caps active Gamma event page size to the public API maximum", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      id: `event_${index}`,
+      question: `Event ${index}?`
+    }));
+    const fetchMock = jest.spyOn(global, "fetch")
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => firstPage
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => []
+      } as Response);
+    const client = new PolymarketClient(config({ POLYMARKET_FETCH_MODE: "fetch" }));
+
+    await expect(client.fetchActiveMarkets(500)).resolves.toEqual(firstPage);
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("limit=100&offset=0");
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain("limit=100&offset=100");
   });
 
   it("loads active markets through the PowerShell fallback when configured", async () => {
@@ -58,16 +115,18 @@ describe("PolymarketClient", () => {
         const done = callback as (error: Error | null, stdout: string, stderr: string) => void;
         done(
           null,
-          JSON.stringify([
-            {
-              markets: [
+          script.includes("offset=0")
+            ? JSON.stringify([
                 {
-                  id: "market_2",
-                  question: "Will ETH all-time high in 2026?"
+                  markets: [
+                    {
+                      id: "market_2",
+                      question: "Will ETH all-time high in 2026?"
+                    }
+                  ]
                 }
-              ]
-            }
-          ]),
+              ])
+            : JSON.stringify([]),
           ""
         );
         return {};
@@ -124,6 +183,23 @@ describe("PolymarketClient", () => {
         method: "POST"
       })
     );
+  });
+
+  it("uses POLYMARKET_CLOB_HOST for public CLOB order book requests", async () => {
+    const fetchMock = jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => []
+    } as Response);
+    const client = new PolymarketClient(
+      config({
+        POLYMARKET_CLOB_HOST: "https://clob-staging.example",
+        POLYMARKET_FETCH_MODE: "fetch"
+      })
+    );
+
+    await expect(client.fetchOrderBooks(["token_yes"])).resolves.toEqual([]);
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("https://clob-staging.example/books");
   });
 });
 

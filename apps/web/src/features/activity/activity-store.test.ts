@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { appendActivity, readActivity } from "./activity-store";
+import { appendActivity, appendOrderPreviewActivity, readActivity } from "./activity-store";
 
 describe("activity-store", () => {
   beforeEach(() => {
@@ -28,5 +28,46 @@ describe("activity-store", () => {
     window.localStorage.setItem("pmx.activity", "{broken");
 
     expect(readActivity()).toEqual([]);
+  });
+
+  it("stores formatted order preview activity", () => {
+    const created = appendOrderPreviewActivity({
+      amountUsd: 10,
+      marketTitle: "Spread: Colombia (-5.5)",
+      outcome: "DR Congo",
+      price: 0.75
+    });
+
+    expect(created).toEqual(
+      expect.objectContaining({
+        id: "activity_1",
+        type: "order.previewed",
+        label: "Spread: Colombia (-5.5)",
+        description: "Buy DR Congo 75c / $10.00",
+        orderPreview: {
+          amountUsd: 10,
+          outcome: "DR Congo",
+          price: 0.75
+        }
+      })
+    );
+    expect(readActivity()[0]?.description).toBe("Buy DR Congo 75c / $10.00");
+  });
+
+  it("does not duplicate the same latest order preview", () => {
+    appendOrderPreviewActivity({
+      amountUsd: 10,
+      marketTitle: "Spread: Colombia (-5.5)",
+      outcome: "DR Congo",
+      price: 0.75
+    });
+    appendOrderPreviewActivity({
+      amountUsd: 10,
+      marketTitle: "Spread: Colombia (-5.5)",
+      outcome: "DR Congo",
+      price: 0.75
+    });
+
+    expect(readActivity()).toHaveLength(1);
   });
 });

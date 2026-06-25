@@ -3,7 +3,18 @@ export interface ActivityItem {
   type: "market.viewed" | "order.previewed";
   label: string;
   description?: string;
+  orderPreview?: OrderPreviewActivityDetails;
   createdAt: string;
+}
+
+export interface OrderPreviewActivityDetails {
+  amountUsd: number;
+  outcome: string;
+  price: number;
+}
+
+interface OrderPreviewActivityInput extends OrderPreviewActivityDetails {
+  marketTitle: string;
 }
 
 const ACTIVITY_KEY = "pmx.activity";
@@ -39,6 +50,30 @@ export function appendActivity(item: Omit<ActivityItem, "id" | "createdAt">): Ac
   return nextItem;
 }
 
+export function appendOrderPreviewActivity(input: OrderPreviewActivityInput): ActivityItem {
+  const description = `Buy ${input.outcome} ${formatCents(input.price)} / ${formatUsd(input.amountUsd)}`;
+  const latestItem = readActivity()[0];
+
+  if (
+    latestItem?.type === "order.previewed" &&
+    latestItem.label === input.marketTitle &&
+    latestItem.description === description
+  ) {
+    return latestItem;
+  }
+
+  return appendActivity({
+    type: "order.previewed",
+    label: input.marketTitle,
+    description,
+    orderPreview: {
+      amountUsd: input.amountUsd,
+      outcome: input.outcome,
+      price: input.price
+    }
+  });
+}
+
 function isActivityItem(value: unknown): value is ActivityItem {
   if (!value || typeof value !== "object") {
     return false;
@@ -51,6 +86,37 @@ function isActivityItem(value: unknown): value is ActivityItem {
     (item.type === "market.viewed" || item.type === "order.previewed") &&
     typeof item.label === "string" &&
     (typeof item.description === "string" || item.description === undefined) &&
+    (isOrderPreviewDetails(item.orderPreview) || item.orderPreview === undefined) &&
     typeof item.createdAt === "string"
   );
+}
+
+function isOrderPreviewDetails(value: unknown): value is OrderPreviewActivityDetails {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const preview = value as Record<string, unknown>;
+
+  return (
+    typeof preview.amountUsd === "number" &&
+    typeof preview.outcome === "string" &&
+    typeof preview.price === "number"
+  );
+}
+
+function formatCents(price: number): string {
+  if (!Number.isFinite(price)) {
+    return "--";
+  }
+
+  return `${Math.round(price * 100)}c`;
+}
+
+function formatUsd(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "$0.00";
+  }
+
+  return `$${value.toFixed(2)}`;
 }

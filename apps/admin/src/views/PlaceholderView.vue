@@ -45,6 +45,7 @@ const loading = ref(false)
 const syncing = ref(false)
 const error = ref('')
 const syncMessage = ref('')
+const syncFailureReason = ref('')
 const summary = ref<AdminSummary | null>(null)
 const gates = ref<AdminGate[]>([])
 const isMarketsPage = computed(() => route.path.startsWith('/markets'))
@@ -59,9 +60,12 @@ const statusItems = computed(() => {
 
   if (path.startsWith('/markets')) {
     return [
-      { label: '市场已同步', value: String(currentSummary.marketsSynced) },
-      { label: '行情已同步', value: String(currentSummary.marketQuotesSynced) },
-      { label: '最近同步', value: syncMessage.value || '点击“同步市场”刷新' },
+      { label: 'marketsSynced', value: String(currentSummary.marketsSynced) },
+      { label: 'marketQuotesSynced', value: String(currentSummary.marketQuotesSynced) },
+      { label: 'latestMarketSyncedAt', value: formatDate(currentSummary.latestMarketSyncedAt) },
+      { label: 'latestMarketQuoteSyncedAt', value: formatDate(currentSummary.latestMarketQuoteSyncedAt) },
+      { label: 'lastSyncResult', value: syncMessage.value || '点击“同步市场”刷新' },
+      { label: 'lastFailureReason', value: syncFailureReason.value || 'none' },
       { label: '市场关口', value: gateStatus('market-data-sync') },
       { label: '行情关口', value: gateStatus('market-quote-sync') }
     ]
@@ -121,18 +125,27 @@ async function handleMarketSync() {
   syncing.value = true
   error.value = ''
   syncMessage.value = ''
+  syncFailureReason.value = ''
 
   try {
     const result = await syncMarkets()
+    syncFailureReason.value = result.error ?? 'none'
     syncMessage.value = result.error
-      ? `市场 ${result.synced}/${result.failed}，行情 ${result.quotesSynced}/${result.quotesFailed}：${result.error}`
-      : `市场 ${result.synced}/${result.failed}，行情 ${result.quotesSynced}/${result.quotesFailed}`
+      ? `市场成功 ${result.synced} / 失败 ${result.failed}，行情成功 ${result.quotesSynced} / 失败 ${result.quotesFailed}：${result.error}`
+      : `市场成功 ${result.synced} / 失败 ${result.failed}，行情成功 ${result.quotesSynced} / 失败 ${result.quotesFailed}`
     await loadStatus()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '同步市场失败'
+    const message = err instanceof Error ? err.message : '同步市场失败'
+    error.value = message
+    syncMessage.value = `市场成功 0 / 失败 1，行情成功 0 / 失败 0：${message}`
+    syncFailureReason.value = message
   } finally {
     syncing.value = false
   }
+}
+
+function formatDate(value: string | null) {
+  return value ? new Date(value).toLocaleString() : 'none'
 }
 
 onMounted(loadStatus)

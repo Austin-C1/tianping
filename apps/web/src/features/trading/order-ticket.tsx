@@ -2,22 +2,40 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Locale } from "../i18n/messages";
-import { calculateOrderPreview, type OrderPreview } from "./order-calculator";
+import { calculateOrderPreview, parseOrderAmount, type OrderPreview } from "./order-calculator";
 
 export type OrderSide = "yes" | "no";
 
-interface OrderTicketProps {
+interface OrderTicketBaseProps {
   locale: Locale;
   marketTitle: string;
   outcomes: string[];
   prices: number[];
-  initialSide?: OrderSide;
   onPreviewChange?: (preview: OrderTicketPreview) => void;
+  readinessGates?: OrderReadinessGate[];
 }
+
+type OrderTicketProps =
+  | (OrderTicketBaseProps & {
+      initialSide?: OrderSide;
+      onSideChange?: never;
+      selectedSide?: never;
+    })
+  | (OrderTicketBaseProps & {
+      initialSide?: OrderSide;
+      onSideChange: (side: OrderSide) => void;
+      selectedSide: OrderSide;
+    });
 
 export interface OrderTicketPreview extends OrderPreview {
   side: OrderSide;
   outcome: string;
+}
+
+export interface OrderReadinessGate {
+  key: string;
+  reason: string;
+  status: "BLOCKED" | "PENDING" | "READY";
 }
 
 const copy = {
@@ -36,7 +54,7 @@ const copy = {
     risk:
       "真实 CLOB 提交被禁用。钱包、Deposit Wallet、余额和地区限制都通过后才允许进入签名。",
     route: "路径",
-    routeValue: "用户钱包签名 -> API 校验 -> CLOB",
+    routeValue: "用户钱包签名 → API 校验 → CLOB",
     gate: "人工确认 Gate"
   },
   en: {
@@ -54,10 +72,12 @@ const copy = {
     risk:
       "Real CLOB submission is disabled. Wallet, Deposit Wallet, balance, and region checks must all pass before signing.",
     route: "Route",
-    routeValue: "User wallet signature -> API validation -> CLOB",
+    routeValue: "User wallet signature → API validation → CLOB",
     gate: "Manual approval Gate"
   }
 } as const;
+
+const quickAmounts = [1, 5, 10, 25, 50] as const;
 
 export function OrderTicket({
   locale,
@@ -65,15 +85,19 @@ export function OrderTicket({
   outcomes,
   prices,
   initialSide = "yes",
-  onPreviewChange
+  selectedSide,
+  onSideChange,
+  onPreviewChange,
+  readinessGates = []
 }: OrderTicketProps) {
   const text = copy[locale];
-  const [side, setSide] = useState<OrderSide>(initialSide);
+  const [internalSide, setInternalSide] = useState<OrderSide>(initialSide);
+  const side = selectedSide ?? internalSide;
   const [amountInput, setAmountInput] = useState("10");
   const sideIndex = side === "yes" ? 0 : 1;
   const outcome = outcomes[sideIndex] ?? (side === "yes" ? "Yes" : "No");
   const price = prices[sideIndex] ?? 0;
-  const amountUsd = Number(amountInput);
+  const amountUsd = parseOrderAmount(amountInput);
   const preview = useMemo(
     () => calculateOrderPreview({ amountUsd, price }),
     [amountUsd, price]
@@ -87,6 +111,18 @@ export function OrderTicket({
     });
   }, [onPreviewChange, outcome, preview, side]);
 
+  useEffect(() => {
+    setInternalSide(initialSide);
+  }, [initialSide]);
+
+  const handleSideChange = (nextSide: OrderSide) => {
+    if (selectedSide === undefined) {
+      setInternalSide(nextSide);
+    }
+
+    onSideChange?.(nextSide);
+  };
+
   return (
     <section className="ticket-card order-ticket-card">
       <div className="section-heading">
@@ -96,16 +132,18 @@ export function OrderTicket({
 
       <div className="ticket-toggle" aria-label={text.outcome}>
         <button
+          aria-pressed={side === "yes"}
           className={side === "yes" ? "active" : ""}
           type="button"
-          onClick={() => setSide("yes")}
+          onClick={() => handleSideChange("yes")}
         >
           {text.buy} {outcomes[0] ?? "Yes"}
         </button>
         <button
+          aria-pressed={side === "no"}
           className={side === "no" ? "active" : ""}
           type="button"
-          onClick={() => setSide("no")}
+          onClick={() => handleSideChange("no")}
         >
           {text.buy} {outcomes[1] ?? "No"}
         </button>
@@ -120,12 +158,23 @@ export function OrderTicket({
         <span>{text.amount}</span>
         <input
           inputMode="decimal"
-          min="0"
           onChange={(event) => setAmountInput(event.target.value)}
-          type="number"
+          type="text"
           value={amountInput}
         />
       </label>
+
+      <div className="amount-shortcuts" aria-label="Quick presets">
+        {quickAmounts.map((amount) => (
+          <button
+            key={amount}
+            type="button"
+            onClick={() => setAmountInput(String(amount))}
+          >
+            ${amount}
+          </button>
+        ))}
+      </div>
 
       <dl className="ticket-lines">
         <div>
@@ -159,6 +208,25 @@ export function OrderTicket({
       </dl>
 
       <div className="risk-note">{text.risk}</div>
+      {readinessGates.length > 0 ? (
+        <section className="readiness-card">
+          <div className="section-heading">
+            <h2>{readinessLabel(locale)}</h2>
+            <span>{text.notSubmittable}</span>
+          </div>
+          <ul className="readiness-list">
+            {readinessGates.map((gate) => (
+              <li className={gate.status.toLowerCase()} key={gate.key}>
+                <span>{gate.status === "READY" ? "OK" : "!"}</span>
+                <div>
+                  <strong>{formatGateKey(gate.key)}</strong>
+                  <small>{gate.reason}</small>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <button className="gate-button" type="button" disabled>
         {text.gate}
       </button>
@@ -181,4 +249,15 @@ function formatShares(value: number, locale: Locale): string {
 
 function formatUsd(value: number): string {
   return `$${value.toFixed(2)}`;
+}
+
+function readinessLabel(locale: Locale): string {
+  return locale === "zh-CN" ? "交易检查" : "Readiness gates";
+}
+
+function formatGateKey(value: string): string {
+  return value
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }

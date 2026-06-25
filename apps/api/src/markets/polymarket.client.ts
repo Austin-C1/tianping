@@ -1,9 +1,18 @@
 import { execFile } from "node:child_process";
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { DEFAULT_POLYMARKET_CLOB_HOST } from "../order-router/order-router.config";
 import type { PolymarketMarketSource } from "./markets.service";
 
 interface GammaEventSource {
+  markets?: PolymarketMarketSource[];
+}
+
+interface GammaPageSource {
+  data?: Array<GammaEventSource | PolymarketMarketSource>;
+  events?: Array<GammaEventSource | PolymarketMarketSource>;
+  hasMore?: boolean;
+  has_more?: boolean;
   markets?: PolymarketMarketSource[];
 }
 
@@ -19,11 +28,17 @@ export interface ClobOrderBookSource {
   bids?: ClobOrderBookLevel[];
   asks?: ClobOrderBookLevel[];
   min_order_size?: string;
+  neg_risk?: boolean;
   tick_size?: string;
   last_trade_price?: string;
 }
 
 type PolymarketFetchMode = "fetch" | "powershell";
+type GammaPayload = GammaEventSource[] | PolymarketMarketSource[] | GammaPageSource;
+
+const DEFAULT_GAMMA_PAGE_SIZE = 100;
+const MAX_GAMMA_PAGE_SIZE = 100;
+const MAX_GAMMA_PAGES = 50;
 
 @Injectable()
 export class PolymarketClient {
@@ -34,21 +49,41 @@ export class PolymarketClient {
 
   constructor(config: ConfigService) {
     this.baseUrl = config.get<string>("POLYMARKET_GAMMA_API_URL", "https://gamma-api.polymarket.com");
-    this.clobBaseUrl = config.get<string>("POLYMARKET_CLOB_API_URL", "https://clob.polymarket.com");
+    this.clobBaseUrl = config.get<string>(
+      "POLYMARKET_CLOB_HOST",
+      config.get<string>("POLYMARKET_CLOB_API_URL", DEFAULT_POLYMARKET_CLOB_HOST)
+    );
     this.fetchMode = this.fetchModeValue(config.get<string>("POLYMARKET_FETCH_MODE", this.defaultFetchMode()));
     this.timeoutMs = Number(config.get<string>("POLYMARKET_FETCH_TIMEOUT_MS", "15000"));
   }
 
-  async fetchActiveMarkets(limit = 50): Promise<PolymarketMarketSource[]> {
+  async fetchActiveMarkets(limit = DEFAULT_GAMMA_PAGE_SIZE): Promise<PolymarketMarketSource[]> {
+    const pageSize = Math.min(Math.max(1, limit), MAX_GAMMA_PAGE_SIZE);
+    const markets: PolymarketMarketSource[] = [];
+
+    for (let page = 0; page < MAX_GAMMA_PAGES; page += 1) {
+      const payload = await this.fetchActiveMarketsPage(pageSize, page * pageSize);
+      const items = this.gammaPageItems(payload);
+      markets.push(...this.marketSources(items));
+
+      if (!this.hasMoreGammaPages(payload, items.length, pageSize)) {
+        break;
+      }
+    }
+
+    return markets;
+  }
+
+  private async fetchActiveMarketsPage(limit: number, offset: number): Promise<GammaPayload> {
     const url = new URL("/events", this.baseUrl);
     url.searchParams.set("active", "true");
     url.searchParams.set("closed", "false");
     url.searchParams.set("limit", String(limit));
+    url.searchParams.set("offset", String(offset));
     url.searchParams.set("order", "volume24hr");
     url.searchParams.set("ascending", "false");
 
-    const payload = await this.fetchGammaJson(url);
-    return this.marketSources(payload);
+    return this.fetchGammaJson(url);
   }
 
   async fetchOrderBooks(tokenIds: string[]): Promise<ClobOrderBookSource[]> {
@@ -66,7 +101,7 @@ export class PolymarketClient {
     return this.fetchOrderBooksWithNode(url, body);
   }
 
-  private async fetchGammaJson(url: URL): Promise<GammaEventSource[] | PolymarketMarketSource[]> {
+  private async fetchGammaJson(url: URL): Promise<GammaPayload> {
     if (this.fetchMode === "powershell") {
       return this.fetchWithPowerShell(url);
     }
@@ -74,7 +109,7 @@ export class PolymarketClient {
     return this.fetchWithNode(url);
   }
 
-  private async fetchWithNode(url: URL): Promise<GammaEventSource[] | PolymarketMarketSource[]> {
+  private async fetchWithNode(url: URL): Promise<GammaPayload> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
@@ -98,10 +133,10 @@ export class PolymarketClient {
       throw new Error(`Polymarket Gamma request failed with ${response.status}`);
     }
 
-    return (await response.json()) as GammaEventSource[] | PolymarketMarketSource[];
+    return (await response.json()) as GammaPayload;
   }
 
-  private async fetchWithPowerShell(url: URL): Promise<GammaEventSource[] | PolymarketMarketSource[]> {
+  private async fetchWithPowerShell(url: URL): Promise<GammaPayload> {
     const script = [
       "$ErrorActionPreference = 'Stop'",
       "$OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)",
@@ -123,7 +158,7 @@ export class PolymarketClient {
     ]);
 
     try {
-      return JSON.parse(stdout) as GammaEventSource[] | PolymarketMarketSource[];
+      return JSON.parse(stdout) as GammaPayload;
     } catch (error) {
       throw new Error(`Polymarket Gamma PowerShell response was not valid JSON: ${this.errorMessage(error)}`);
     }
@@ -191,7 +226,37 @@ export class PolymarketClient {
     }
   }
 
-  private marketSources(payload: GammaEventSource[] | PolymarketMarketSource[]) {
+  private gammaPageItems(payload: GammaPayload): Array<GammaEventSource | PolymarketMarketSource> {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    if (Array.isArray(payload.data)) {
+      return payload.data;
+    }
+
+    if (Array.isArray(payload.events)) {
+      return payload.events;
+    }
+
+    return Array.isArray(payload.markets) ? payload.markets : [];
+  }
+
+  private hasMoreGammaPages(payload: GammaPayload, itemCount: number, pageSize: number) {
+    if (!Array.isArray(payload)) {
+      if (typeof payload.hasMore === "boolean") {
+        return payload.hasMore;
+      }
+
+      if (typeof payload.has_more === "boolean") {
+        return payload.has_more;
+      }
+    }
+
+    return itemCount === pageSize;
+  }
+
+  private marketSources(payload: Array<GammaEventSource | PolymarketMarketSource>) {
     return payload.flatMap((item) => ("markets" in item && Array.isArray(item.markets) ? item.markets : [item as PolymarketMarketSource]));
   }
 

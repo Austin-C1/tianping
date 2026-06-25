@@ -11,6 +11,20 @@ export interface OrderPreview {
   estimatedProfit: number;
 }
 
+export function parseOrderAmount(value: string): number {
+  const normalized = value.trim().replace(/^\$/, "").replace(/,/g, "");
+
+  if (!value.trim()) {
+    return 0;
+  }
+
+  if (!/^\$?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{1,2})?$/.test(value.trim())) {
+    return Number.NaN;
+  }
+
+  return Number(normalized);
+}
+
 export function calculateOrderPreview(input: OrderPreviewInput): OrderPreview {
   const amountUsd = normalizeMoney(input.amountUsd);
   const price = Number(input.price);

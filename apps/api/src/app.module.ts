@@ -7,6 +7,7 @@ import { ComplianceModule } from "./compliance/compliance.module";
 import { HealthController } from "./health.controller";
 import { JobsModule } from "./jobs/jobs.module";
 import { MarketsModule } from "./markets/markets.module";
+import { validateOrderRouterEnv } from "./order-router/order-router.config";
 import { OrdersModule } from "./orders/orders.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { UsersModule } from "./users/users.module";
@@ -16,7 +17,8 @@ import { WalletsModule } from "./wallets/wallets.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [".env.local", ".env", "../../.env.local", "../../.env"]
+      envFilePath: [".env.local", ".env", "../../.env.local", "../../.env"],
+      validate: validateOrderRouterEnv
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],

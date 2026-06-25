@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../features/i18n/language-provider";
 import type { HomeMessages } from "../features/i18n/messages";
 import { WebTopbar } from "../features/layout/web-topbar";
@@ -25,6 +25,12 @@ interface DisplayMarket {
   prices: string[];
 }
 
+interface MarketCategoryGroup {
+  category: string;
+  markets: DisplayMarket[];
+}
+
+const CATEGORY_PREVIEW_LIMIT = 4;
 const readinessTones: ReadinessTone[] = ["pending", "blocked", "blocked", "pending", "blocked"];
 
 export default function Home() {
@@ -36,15 +42,26 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
   const [orderSide, setOrderSide] = useState<OrderSide>("yes");
+  const [isRefreshingMarkets, setIsRefreshingMarkets] = useState(false);
+
+  const loadMarkets = useCallback(async () => {
+    setIsRefreshingMarkets(true);
+    setMarketStatusKey("loading");
+
+    try {
+      const items = await fetchMarkets();
+      setMarkets(items);
+      setMarketStatusKey(items.length > 0 ? "connected" : "waiting");
+    } catch {
+      setMarketStatusKey("unavailable");
+    } finally {
+      setIsRefreshingMarkets(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetchMarkets()
-      .then((items) => {
-        setMarkets(items);
-        setMarketStatusKey(items.length > 0 ? "connected" : "waiting");
-      })
-      .catch(() => setMarketStatusKey("unavailable"));
-  }, []);
+    void loadMarkets();
+  }, [loadMarkets]);
 
   useEffect(() => {
     setActiveCategory(copy.all);
@@ -89,11 +106,29 @@ export default function Home() {
     return sourceMarkets.map((market) => ({
       source: market,
       question: localizeMarketQuestion(market.question, locale),
-      category: localizeMarketCategory(market.category, locale, copy.categoryFallback),
+      category: localizeMarketCategory(market.category, locale, copy.categoryFallback, market.question),
       outcomes: toStringArray(market.outcomes).map((outcome) => localizeOutcome(outcome, locale)),
       prices: toOutcomePrices(market)
     }));
   }, [copy.categoryFallback, emptyMarket, locale, markets]);
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    displayMarkets.forEach((market) => {
+      counts.set(market.category, (counts.get(market.category) ?? 0) + 1);
+    });
+
+    return counts;
+  }, [displayMarkets]);
+
+  const categoryOptions = useMemo(() => {
+    const configuredCategories: string[] = copy.categories.filter((category) => category !== copy.all);
+    const discoveredCategories = Array.from(categoryCounts.keys()).filter(
+      (category) => !configuredCategories.includes(category)
+    );
+
+    return [copy.all, ...configuredCategories, ...discoveredCategories];
+  }, [categoryCounts, copy.all, copy.categories]);
 
   const filteredMarkets = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -109,7 +144,12 @@ export default function Home() {
     });
   }, [activeCategory, copy.all, displayMarkets, query]);
 
-  const visibleMarkets = filteredMarkets.length > 0 ? filteredMarkets : displayMarkets;
+  const visibleMarkets = filteredMarkets;
+  const isOverviewMode = activeCategory === copy.all && query.trim().length === 0;
+  const categoryGroups = useMemo(
+    () => groupMarketsByCategory(visibleMarkets, categoryOptions),
+    [categoryOptions, visibleMarkets]
+  );
   const selectedMarket =
     visibleMarkets.find((market) => market.source.id === selectedMarketId) ??
     visibleMarkets[0] ??
@@ -118,6 +158,47 @@ export default function Home() {
   const selectedOutcome = selectedMarket.outcomes[selectedSideIndex] ?? localizeOutcome(orderSide === "yes" ? "Yes" : "No", locale);
   const selectedPrice = selectedMarket.prices[selectedSideIndex] ?? "0";
   const selectedPriceCents = `${toCents(selectedPrice)}c`;
+  const renderMarketCard = (market: DisplayMarket) => (
+    <article
+      className={market.source.id === selectedMarket.source.id ? "market-card selected" : "market-card"}
+      key={market.source.id}
+    >
+      <div className="market-card-top">
+        <span>{market.category}</span>
+        <small>{market.source.active && !market.source.closed ? copy.open : copy.readOnlyPreview}</small>
+      </div>
+      <h3>
+        <Link href={getMarketHref(market.source.marketId)}>{market.question}</Link>
+      </h3>
+      <div className="market-meta">
+        <span>{copy.volume}: {formatUsd(market.source.volume)}</span>
+        <span>{copy.liquidity}: {formatUsd(market.source.liquidity)}</span>
+        <span>{locale === "zh-CN" ? "最后同步" : "Last sync"}: {formatDateTime(market.source.syncedAt, locale)}</span>
+      </div>
+      <div className="outcome-buttons" aria-label={copy.orderDirection}>
+        <Link
+          className={
+            market.source.id === selectedMarket.source.id && orderSide === "yes"
+              ? "yes active"
+              : "yes"
+          }
+          href={getMarketHref(market.source.marketId, "yes")}
+        >
+          {market.outcomes[0] ?? localizeOutcome("Yes", locale)} {market.prices[0] ? `${toCents(market.prices[0])}c` : "--"}
+        </Link>
+        <Link
+          className={
+            market.source.id === selectedMarket.source.id && orderSide === "no"
+              ? "no active"
+              : "no"
+          }
+          href={getMarketHref(market.source.marketId, "no")}
+        >
+          {market.outcomes[1] ?? localizeOutcome("No", locale)} {market.prices[1] ? `${toCents(market.prices[1])}c` : "--"}
+        </Link>
+      </div>
+    </article>
+  );
 
   return (
     <main className="trading-shell polymarket-shell">
@@ -130,16 +211,21 @@ export default function Home() {
             <strong>{copy.filterTitle}</strong>
           </div>
           <div className="category-list">
-            {copy.categories.map((category) => (
+            {categoryOptions.map((category) => {
+              const count = category === copy.all ? displayMarkets.length : categoryCounts.get(category) ?? 0;
+
+              return (
               <button
                 className={category === activeCategory ? "category-button active" : "category-button"}
                 key={category}
                 type="button"
                 onClick={() => setActiveCategory(category)}
               >
-                {category}
+                <span>{category}</span>
+                <small>{formatMarketCount(count, locale)}</small>
               </button>
-            ))}
+              );
+            })}
           </div>
           <div className="rail-status">
             <span>{copy.marketSync}</span>
@@ -170,54 +256,57 @@ export default function Home() {
           <section className="feed-section" aria-labelledby="featured-markets-heading">
             <div className="section-heading">
               <div>
-                <h2 id="featured-markets-heading">{copy.overviewTitle}</h2>
-                <span>{marketStatus}</span>
+                <h2 id="featured-markets-heading">{isOverviewMode ? copy.overviewTitle : copy.filteredResults}</h2>
+                <span>{isOverviewMode ? marketStatus : formatMarketCount(visibleMarkets.length, locale)}</span>
               </div>
-              <button type="button">{copy.syncPublicMarkets}</button>
+              <button type="button" disabled={isRefreshingMarkets} onClick={loadMarkets}>
+                {copy.syncPublicMarkets}
+              </button>
             </div>
 
-            <div className="market-card-grid">
-              {visibleMarkets.slice(0, 6).map((market) => (
-                <article
-                  className={market.source.id === selectedMarket.source.id ? "market-card selected" : "market-card"}
-                  key={market.source.id}
+            {visibleMarkets.length === 0 ? (
+              <div className="empty-market-results">
+                <p>{copy.noMarketResults}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveCategory(copy.all);
+                    setQuery("");
+                  }}
                 >
-                  <div className="market-card-top">
-                    <span>{market.category}</span>
-                    <small>{market.source.active && !market.source.closed ? copy.open : copy.readOnlyPreview}</small>
-                  </div>
-                  <h3>
-                    <Link href={getMarketHref(market.source.marketId)}>{market.question}</Link>
-                  </h3>
-                  <div className="market-meta">
-                    <span>{copy.volume}: {formatUsd(market.source.volume)}</span>
-                    <span>{copy.liquidity}: {formatUsd(market.source.liquidity)}</span>
-                  </div>
-                  <div className="outcome-buttons" aria-label={copy.orderDirection}>
-                    <Link
-                      className={
-                        market.source.id === selectedMarket.source.id && orderSide === "yes"
-                          ? "yes active"
-                          : "yes"
-                      }
-                      href={getMarketHref(market.source.marketId, "yes")}
-                    >
-                      {market.outcomes[0] ?? localizeOutcome("Yes", locale)} {market.prices[0] ? `${toCents(market.prices[0])}c` : "--"}
-                    </Link>
-                    <Link
-                      className={
-                        market.source.id === selectedMarket.source.id && orderSide === "no"
-                          ? "no active"
-                          : "no"
-                      }
-                      href={getMarketHref(market.source.marketId, "no")}
-                    >
-                      {market.outcomes[1] ?? localizeOutcome("No", locale)} {market.prices[1] ? `${toCents(market.prices[1])}c` : "--"}
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </div>
+                  {copy.clearFilters}
+                </button>
+              </div>
+            ) : isOverviewMode ? (
+              <div className="market-category-sections">
+                {categoryGroups.map((group) => {
+                  const previewMarkets = group.markets.slice(0, CATEGORY_PREVIEW_LIMIT);
+
+                  return (
+                    <section className="market-category-section" key={group.category}>
+                      <div className="category-section-heading">
+                        <div>
+                          <h3>{group.category}</h3>
+                          <span>{formatGroupSummary(group.markets.length, previewMarkets.length, locale)}</span>
+                        </div>
+                        {group.markets.length > CATEGORY_PREVIEW_LIMIT ? (
+                          <button type="button" onClick={() => setActiveCategory(group.category)}>
+                            {copy.groupAction}
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="market-card-grid">
+                        {previewMarkets.map(renderMarketCard)}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="market-card-grid">
+                {visibleMarkets.map(renderMarketCard)}
+              </div>
+            )}
           </section>
 
           <section className="feed-section compact-list" aria-labelledby="top-markets-heading">
@@ -347,13 +436,33 @@ function toStringArray(value: unknown): string[] {
 function toOutcomePrices(market: MarketListItem): string[] {
   const gammaPrices = toStringArray(market.outcomePrices);
   const quotes = market.quotes ?? [];
-  const maxLength = Math.max(gammaPrices.length, quotes.length);
+  const maxQuoteIndex = Math.max(-1, ...quotes.map((quote) => quote.outcomeIndex));
+  const maxLength = Math.max(gammaPrices.length, maxQuoteIndex + 1);
 
   return Array.from({ length: maxLength }, (_, index) => {
     const quote = quotes.find((item) => item.outcomeIndex === index);
 
     return quote?.bestAsk ?? quote?.midpoint ?? gammaPrices[index] ?? "0";
   });
+}
+
+function groupMarketsByCategory(markets: DisplayMarket[], categoryOptions: string[]): MarketCategoryGroup[] {
+  const groups = new Map<string, DisplayMarket[]>();
+  markets.forEach((market) => {
+    const group = groups.get(market.category) ?? [];
+    group.push(market);
+    groups.set(market.category, group);
+  });
+
+  const orderedCategories = [
+    ...categoryOptions.filter((category) => groups.has(category)),
+    ...Array.from(groups.keys()).filter((category) => !categoryOptions.includes(category))
+  ];
+
+  return orderedCategories
+    .filter((category) => category !== categoryOptions[0])
+    .map((category) => ({ category, markets: groups.get(category) ?? [] }))
+    .filter((group) => group.markets.length > 0);
 }
 
 function toCents(value: string): string {
@@ -387,6 +496,41 @@ function formatEstimatedCost(value: string): string {
   }
 
   return `$${(numeric * 100).toFixed(2)}`;
+}
+
+function formatDateTime(value: string, locale: string): string {
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "--";
+  }
+
+  return new Intl.DateTimeFormat(locale === "zh-CN" ? "zh-CN" : "en-US", {
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+    timeZoneName: "short",
+    year: "numeric"
+  }).format(date);
+}
+
+function formatMarketCount(count: number, locale: string): string {
+  if (locale === "zh-CN") {
+    return `${count} 个市场`;
+  }
+
+  return count === 1 ? "1 market" : `${count} markets`;
+}
+
+function formatGroupSummary(totalCount: number, visibleCount: number, locale: string): string {
+  if (locale === "zh-CN") {
+    return visibleCount < totalCount ? `${totalCount} 个市场，先显示 ${visibleCount} 个` : `${totalCount} 个市场`;
+  }
+
+  const totalLabel = formatMarketCount(totalCount, locale);
+  return visibleCount < totalCount ? `${totalLabel}, showing ${visibleCount}` : totalLabel;
 }
 
 function getMarketHref(marketId: string, side?: OrderSide): Route {

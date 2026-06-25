@@ -33,6 +33,7 @@ export interface MarketQuoteItem {
   midpoint: string | null;
   spread: string | null;
   minOrderSize: string | null;
+  negRisk: boolean;
   tickSize: string | null;
   syncedAt: Date;
 }
@@ -82,7 +83,6 @@ interface QuoteRequest {
   tokenId: string;
 }
 
-const MARKET_SYNC_LIMIT = 50;
 const CLOB_BOOK_BATCH_SIZE = 40;
 
 @Injectable()
@@ -99,7 +99,7 @@ export class MarketsService {
 
     let markets: PolymarketMarketSource[];
     try {
-      markets = await this.polymarketClient.fetchActiveMarkets(50);
+      markets = await this.polymarketClient.fetchActiveMarkets();
     } catch (error) {
       return {
         synced: 0,
@@ -112,9 +112,10 @@ export class MarketsService {
 
     let synced = 0;
     let failed = 0;
+    let firstError: string | undefined;
     const quoteRequests: QuoteRequest[] = [];
 
-    const syncableMarkets = markets.filter((market) => this.isSyncableMarket(market)).slice(0, MARKET_SYNC_LIMIT);
+    const syncableMarkets = markets.filter((market) => this.isSyncableMarket(market));
 
     for (const market of syncableMarkets) {
       try {
@@ -167,8 +168,9 @@ export class MarketsService {
           });
         });
         synced += 1;
-      } catch {
+      } catch (error) {
         failed += 1;
+        firstError ??= error instanceof Error ? error.message : "Market snapshot sync failed";
       }
     }
 
@@ -179,15 +181,14 @@ export class MarketsService {
       failed,
       quotesSynced: quoteResult.synced,
       quotesFailed: quoteResult.failed,
-      ...(quoteResult.error ? { error: quoteResult.error } : {})
+      ...(firstError || quoteResult.error ? { error: firstError ?? quoteResult.error } : {})
     };
   }
 
   async listMarkets(): Promise<MarketListItem[]> {
     const markets = await this.prisma.marketSnapshot.findMany({
       include: { quotes: { orderBy: { outcomeIndex: "asc" } } },
-      orderBy: [{ syncedAt: "desc" }, { volume: "desc" }],
-      take: 50
+      orderBy: [{ syncedAt: "desc" }, { volume: "desc" }]
     });
 
     return markets.map((market) => this.toListItem(market));
@@ -231,6 +232,7 @@ export class MarketsService {
       const result = await this.upsertQuoteBatch(batch, booksByToken);
       synced += result.synced;
       failed += result.failed;
+      firstError ??= result.error;
     }
 
     return { synced, failed, ...(firstError ? { error: firstError } : {}) };
@@ -242,11 +244,13 @@ export class MarketsService {
   ) {
     let synced = 0;
     let failed = 0;
+    let firstError: string | undefined;
 
     for (const quoteRequest of quoteRequests) {
       const book = booksByToken.get(quoteRequest.tokenId);
       if (!book) {
         failed += 1;
+        firstError ??= `Missing CLOB order book for token ${quoteRequest.tokenId}`;
         continue;
       }
 
@@ -261,6 +265,7 @@ export class MarketsService {
             marketSnapshotId: quoteRequest.marketSnapshotId,
             midpoint: normalized.midpoint,
             minOrderSize: normalized.minOrderSize,
+            negRisk: normalized.negRisk,
             orderBookHash: book.hash ?? null,
             outcome: quoteRequest.outcome,
             outcomeIndex: quoteRequest.outcomeIndex,
@@ -275,6 +280,7 @@ export class MarketsService {
             marketSnapshotId: quoteRequest.marketSnapshotId,
             midpoint: normalized.midpoint,
             minOrderSize: normalized.minOrderSize,
+            negRisk: normalized.negRisk,
             orderBookHash: book.hash ?? null,
             outcome: quoteRequest.outcome,
             outcomeIndex: quoteRequest.outcomeIndex,
@@ -286,12 +292,13 @@ export class MarketsService {
           }
         });
         synced += 1;
-      } catch {
+      } catch (error) {
         failed += 1;
+        firstError ??= error instanceof Error ? error.message : "CLOB quote snapshot sync failed";
       }
     }
 
-    return { synced, failed };
+    return { synced, failed, ...(firstError ? { error: firstError } : {}) };
   }
 
   private chunk<T>(items: T[], size: number): T[][] {
@@ -339,6 +346,7 @@ export class MarketsService {
       bestBid: this.decimalNumberString(bestBid),
       midpoint: this.decimalNumberString(midpoint),
       minOrderSize: this.decimalString(book.min_order_size),
+      negRisk: book.neg_risk ?? false,
       spread: this.decimalNumberString(spread),
       tickSize: this.decimalString(book.tick_size)
     };
@@ -370,6 +378,7 @@ export class MarketsService {
       midpoint: { toString(): string } | string | null;
       spread: { toString(): string } | string | null;
       minOrderSize: { toString(): string } | string | null;
+      negRisk: boolean;
       tickSize: { toString(): string } | string | null;
       syncedAt: Date;
     }>;
@@ -400,6 +409,7 @@ export class MarketsService {
         midpoint: this.optionalString(quote.midpoint),
         spread: this.optionalString(quote.spread),
         minOrderSize: this.optionalString(quote.minOrderSize),
+        negRisk: quote.negRisk,
         tickSize: this.optionalString(quote.tickSize),
         syncedAt: quote.syncedAt
       }))

@@ -63,6 +63,7 @@ describe("MarketsService", () => {
           bids: [{ price: "0.51", size: "100" }],
           asks: [{ price: "0.53", size: "80" }],
           min_order_size: "5",
+          neg_risk: true,
           tick_size: "0.01"
         },
         {
@@ -84,7 +85,7 @@ describe("MarketsService", () => {
       quotesSynced: 2,
       quotesFailed: 0
     });
-    expect(client.fetchActiveMarkets).toHaveBeenCalledWith(50);
+    expect(client.fetchActiveMarkets).toHaveBeenCalledWith();
     expect(client.fetchOrderBooks).toHaveBeenCalledWith(["token_yes", "token_no"]);
     expect(prisma.marketSnapshot.upsert).toHaveBeenCalledWith({
       where: { marketId: "market_1" },
@@ -130,6 +131,7 @@ describe("MarketsService", () => {
         bestAsk: "0.53",
         bestBid: "0.51",
         midpoint: "0.52",
+        negRisk: true,
         spread: "0.02"
       }),
       create: expect.objectContaining({
@@ -137,6 +139,7 @@ describe("MarketsService", () => {
         bestBid: "0.51",
         marketSnapshotId: "snapshot_1",
         midpoint: "0.52",
+        negRisk: true,
         outcome: "Yes",
         outcomeIndex: 0,
         spread: "0.02",
@@ -176,7 +179,64 @@ describe("MarketsService", () => {
     expect(prisma.marketQuoteSnapshot.upsert).not.toHaveBeenCalled();
   });
 
-  it("limits flattened Gamma markets and batches CLOB book requests", async () => {
+  it("reports individual market sync failure reasons", async () => {
+    const prisma = createPrisma();
+    prisma.marketSnapshot.upsert.mockRejectedValue(new Error("Snapshot write failed"));
+    const client = createClient([
+      {
+        id: "market_1",
+        question: "Will BTC close above $100k this week?",
+        active: true,
+        closed: false,
+        enableOrderBook: true,
+        clobTokenIds: '["token_yes"]',
+        outcomes: '["Yes"]'
+      }
+    ]);
+    const service = new MarketsService(prisma as never, client as never);
+
+    await expect(service.syncActiveMarkets({ role: "ADMIN" })).resolves.toEqual({
+      synced: 0,
+      failed: 1,
+      quotesSynced: 0,
+      quotesFailed: 0,
+      error: "Snapshot write failed"
+    });
+    expect(client.fetchOrderBooks).not.toHaveBeenCalled();
+  });
+
+  it("reports missing quote book failure reasons", async () => {
+    const prisma = createPrisma();
+    prisma.marketSnapshot.upsert.mockResolvedValue({
+      id: "snapshot_1",
+      marketId: "market_1"
+    });
+    const client = createClient(
+      [
+        {
+          id: "market_1",
+          question: "Will BTC close above $100k this week?",
+          active: true,
+          closed: false,
+          enableOrderBook: true,
+          clobTokenIds: '["token_yes"]',
+          outcomes: '["Yes"]'
+        }
+      ],
+      []
+    );
+    const service = new MarketsService(prisma as never, client as never);
+
+    await expect(service.syncActiveMarkets({ role: "ADMIN" })).resolves.toEqual({
+      synced: 1,
+      failed: 0,
+      quotesSynced: 0,
+      quotesFailed: 1,
+      error: "Missing CLOB order book for token token_yes"
+    });
+  });
+
+  it("syncs all flattened Gamma markets and batches CLOB book requests", async () => {
     const prisma = createPrisma();
     prisma.marketSnapshot.upsert.mockImplementation(({ create }) =>
       Promise.resolve({
@@ -196,7 +256,7 @@ describe("MarketsService", () => {
     }));
     const client = createClient(
       markets,
-      Array.from({ length: 50 }, (_, index) => ({
+      Array.from({ length: 55 }, (_, index) => ({
         asset_id: `token_${index}`,
         bids: [{ price: "0.40", size: "10" }],
         asks: [{ price: "0.60", size: "10" }]
@@ -211,7 +271,7 @@ describe("MarketsService", () => {
         }))
       )
       .mockResolvedValueOnce(
-        Array.from({ length: 10 }, (_, index) => ({
+        Array.from({ length: 15 }, (_, index) => ({
           asset_id: `token_${index + 40}`,
           bids: [{ price: "0.40", size: "10" }],
           asks: [{ price: "0.60", size: "10" }]
@@ -220,19 +280,19 @@ describe("MarketsService", () => {
     const service = new MarketsService(prisma as never, client as never);
 
     await expect(service.syncActiveMarkets({ role: "ADMIN" })).resolves.toEqual({
-      synced: 50,
+      synced: 55,
       failed: 0,
-      quotesSynced: 50,
+      quotesSynced: 55,
       quotesFailed: 0
     });
-    expect(prisma.marketSnapshot.upsert).toHaveBeenCalledTimes(50);
+    expect(prisma.marketSnapshot.upsert).toHaveBeenCalledTimes(55);
     expect(client.fetchOrderBooks).toHaveBeenNthCalledWith(
       1,
       Array.from({ length: 40 }, (_, index) => `token_${index}`)
     );
     expect(client.fetchOrderBooks).toHaveBeenNthCalledWith(
       2,
-      Array.from({ length: 10 }, (_, index) => `token_${index + 40}`)
+      Array.from({ length: 15 }, (_, index) => `token_${index + 40}`)
     );
   });
 
@@ -293,6 +353,7 @@ describe("MarketsService", () => {
             bestBid: "0.51",
             bestAsk: "0.53",
             midpoint: "0.52",
+            negRisk: true,
             spread: "0.02",
             minOrderSize: "5",
             tickSize: "0.01",
@@ -329,6 +390,7 @@ describe("MarketsService", () => {
             bestBid: "0.51",
             bestAsk: "0.53",
             midpoint: "0.52",
+            negRisk: true,
             spread: "0.02",
             minOrderSize: "5",
             tickSize: "0.01",
@@ -339,8 +401,7 @@ describe("MarketsService", () => {
     ]);
     expect(prisma.marketSnapshot.findMany).toHaveBeenCalledWith({
       include: { quotes: { orderBy: { outcomeIndex: "asc" } } },
-      orderBy: [{ syncedAt: "desc" }, { volume: "desc" }],
-      take: 50
+      orderBy: [{ syncedAt: "desc" }, { volume: "desc" }]
     });
   });
 

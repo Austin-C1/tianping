@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import type { Route } from "next";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { appendActivity } from "../activity/activity-store";
+import { appendActivity, appendOrderPreviewActivity } from "../activity/activity-store";
 import { useLanguage } from "../i18n/language-provider";
 import type { Locale } from "../i18n/messages";
 import { WebTopbar } from "../layout/web-topbar";
-import { OrderTicket, type OrderSide, type OrderTicketPreview } from "../trading/order-ticket";
+import {
+  OrderTicket,
+  type OrderReadinessGate,
+  type OrderSide,
+  type OrderTicketPreview
+} from "../trading/order-ticket";
+import { previewOrder } from "../trading/order-preview-client";
 import {
   localizeMarketCategory,
   localizeMarketQuestion,
@@ -42,7 +49,7 @@ const copy = {
     previewOnly: "仅预览",
     readiness: "交易准备",
     route: "签名路径",
-    routeValue: "用户钱包签名 -> API 校验 -> CLOB",
+    routeValue: "用户钱包签名 → API 校验 → CLOB",
     selected: "已选择",
     status: "开放",
     statusLabel: "状态",
@@ -64,7 +71,7 @@ const copy = {
     previewOnly: "Preview only",
     readiness: "Trade readiness",
     route: "Signing route",
-    routeValue: "User wallet signature -> API validation -> CLOB",
+    routeValue: "User wallet signature → API validation → CLOB",
     selected: "Selected",
     status: "Open",
     statusLabel: "Status",
@@ -77,9 +84,13 @@ const copy = {
 
 export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: MarketDetailPageProps) {
   const { locale } = useLanguage();
+  const pathname = usePathname();
+  const router = useRouter();
   const text = copy[locale];
   const [markets, setMarkets] = useState<MarketListItem[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [selectedSide, setSelectedSide] = useState<OrderSide>(initialSide);
+  const [readinessGates, setReadinessGates] = useState<OrderReadinessGate[]>([]);
   const lastActivityKey = useRef("");
 
   useEffect(() => {
@@ -102,6 +113,12 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
       market.source.id === initialMarketId ||
       market.source.slug === initialMarketId
   );
+  const tradableOutcomes = selectedMarket?.outcomes.slice(0, 2) ?? [];
+  const tradablePrices = selectedMarket?.prices.slice(0, 2) ?? [];
+
+  useEffect(() => {
+    setSelectedSide(initialSide);
+  }, [initialSide, initialMarketId]);
 
   useEffect(() => {
     if (!selectedMarket) {
@@ -127,19 +144,41 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
         return;
       }
 
+      const outcomeIndex = preview.side === "yes" ? 0 : 1;
       const key = `order.previewed:${selectedMarket.source.marketId}:${preview.side}:${preview.amountUsd}:${preview.price}`;
       if (lastActivityKey.current === key) {
         return;
       }
 
       lastActivityKey.current = key;
-      appendActivity({
-        type: "order.previewed",
-        label: selectedMarket.question,
-        description: `${preview.outcome} ${Math.round(preview.price * 100)}c / $${preview.amountUsd.toFixed(2)}`
+      appendOrderPreviewActivity({
+        amountUsd: preview.amountUsd,
+        marketTitle: selectedMarket.question,
+        outcome: preview.outcome,
+        price: preview.price
       });
+      void previewOrder({
+        amountUsd: preview.amountUsd,
+        marketId: selectedMarket.source.marketId,
+        outcomeIndex,
+        orderType: "FAK"
+      })
+        .then((response) => {
+          if (response?.readiness?.gates) {
+            setReadinessGates(response.readiness.gates);
+          }
+        })
+        .catch(() => undefined);
     },
     [selectedMarket]
+  );
+
+  const handleSideChange = useCallback(
+    (side: OrderSide) => {
+      setSelectedSide(side);
+      router.replace(`${pathname}?side=${side}` as Route, { scroll: false });
+    },
+    [pathname, router]
   );
 
   if (status === "loading") {
@@ -188,7 +227,7 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
             <Metric label={text.statusLabel} value={selectedMarket.source.active && !selectedMarket.source.closed ? text.status : text.previewOnly} />
             <Metric label={text.volume} value={formatUsd(selectedMarket.source.volume)} />
             <Metric label={text.liquidity} value={formatUsd(selectedMarket.source.liquidity)} />
-            <Metric label={text.selected} value={selectedMarket.category} />
+            <Metric label={locale === "zh-CN" ? "最后同步" : "Last sync"} value={formatDateTime(selectedMarket.source.syncedAt, locale)} />
           </div>
 
           <section className="feed-section">
@@ -197,16 +236,24 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
               <span>{text.previewOnly}</span>
             </div>
             <div className="order-book-grid">
-              {selectedMarket.outcomes.map((outcome, index) => (
-                <Link
-                  className={index === 0 ? "order-book-row yes" : "order-book-row no"}
-                  href={getMarketHref(selectedMarket.source.marketId, index === 0 ? "yes" : "no")}
-                  key={outcome}
-                >
-                  <span>{outcome}</span>
-                  <strong>{formatCents(selectedMarket.prices[index] ?? 0)}</strong>
-                </Link>
-              ))}
+              {tradableOutcomes.map((outcome, index) => {
+                const side: OrderSide = index === 0 ? "yes" : "no";
+
+                return (
+                  <button
+                    aria-pressed={selectedSide === side}
+                    className={`${side === "yes" ? "order-book-row yes" : "order-book-row no"} ${
+                      selectedSide === side ? "active" : ""
+                    }`}
+                    key={outcome}
+                    type="button"
+                    onClick={() => handleSideChange(side)}
+                  >
+                    <span>{outcome}</span>
+                    <strong>{formatCents(tradablePrices[index] ?? 0)}</strong>
+                  </button>
+                );
+              })}
             </div>
           </section>
 
@@ -223,8 +270,11 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
             locale={locale}
             marketTitle={selectedMarket.question}
             onPreviewChange={handlePreviewChange}
-            outcomes={selectedMarket.outcomes}
-            prices={selectedMarket.prices}
+            onSideChange={handleSideChange}
+            outcomes={tradableOutcomes}
+            prices={tradablePrices}
+            readinessGates={readinessGates}
+            selectedSide={selectedSide}
           />
         </aside>
       </div>
@@ -267,7 +317,8 @@ function toStringArray(value: unknown): string[] {
 function toOutcomePrices(market: MarketListItem): string[] {
   const gammaPrices = toStringArray(market.outcomePrices);
   const quotes = market.quotes ?? [];
-  const maxLength = Math.max(gammaPrices.length, quotes.length);
+  const maxQuoteIndex = Math.max(-1, ...quotes.map((quote) => quote.outcomeIndex));
+  const maxLength = Math.max(gammaPrices.length, maxQuoteIndex + 1);
 
   return Array.from({ length: maxLength }, (_, index) => {
     const quote = quotes.find((item) => item.outcomeIndex === index);
@@ -289,14 +340,28 @@ function formatUsd(value: string | null): string {
   return `$${Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numeric)}`;
 }
 
+function formatDateTime(value: string, locale: Locale): string {
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "--";
+  }
+
+  return new Intl.DateTimeFormat(locale === "zh-CN" ? "zh-CN" : "en-US", {
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+    timeZoneName: "short",
+    year: "numeric"
+  }).format(date);
+}
+
 function formatCents(price: number): string {
   if (!Number.isFinite(price)) {
     return "--";
   }
 
   return `${Math.round(price * 100)}c`;
-}
-
-function getMarketHref(marketId: string, side: OrderSide): Route {
-  return `/markets/${encodeURIComponent(marketId)}?side=${side}` as Route;
 }
