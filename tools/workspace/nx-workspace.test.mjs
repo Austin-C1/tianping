@@ -47,6 +47,12 @@ test("Nx project names, tags, and targets are declared", () => {
       targets: ["build", "test"]
     },
     {
+      path: "libs/domain/package.json",
+      name: "domain",
+      tags: ["type:lib", "scope:domain", "layer:domain"],
+      targets: ["build", "test"]
+    },
+    {
       path: "packages/shared/package.json",
       name: "shared",
       tags: ["type:lib", "scope:shared"],

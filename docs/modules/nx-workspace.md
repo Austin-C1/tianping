@@ -20,6 +20,7 @@
 | `api` | `apps/api` | `type:app`, `scope:api` |
 | `api-client` | `libs/api-client` | `type:lib`, `scope:shared`, `layer:client` |
 | `contracts` | `libs/contracts` | `type:lib`, `scope:contracts`, `layer:contracts` |
+| `domain` | `libs/domain` | `type:lib`, `scope:domain`, `layer:domain` |
 | `shared` | `packages/shared` | `type:lib`, `scope:shared` |
 
 ## 验证方式

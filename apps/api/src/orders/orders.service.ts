@@ -1,11 +1,11 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { toClobOrderDraft } from "@pmx/domain";
 import { Prisma } from "@prisma/client";
 import { ORDERS_REPOSITORY } from "../infrastructure/repositories/repository.tokens";
 import type { OrdersRepository } from "../infrastructure/repositories/repository.types";
 import { WalletReadinessService } from "../wallets/wallet-readiness.service";
 import type { PreviewOrderDto } from "./dto/preview-order.dto";
-import { toClobOrderDraft } from "./order-domain";
 
 interface Operator {
   userId: string;

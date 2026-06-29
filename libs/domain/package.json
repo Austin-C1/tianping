@@ -1,0 +1,27 @@
+{
+  "name": "@pmx/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run src"
+  },
+  "nx": {
+    "name": "domain",
+    "tags": ["type:lib", "scope:domain", "layer:domain"]
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "vitest": "latest"
+  }
+}

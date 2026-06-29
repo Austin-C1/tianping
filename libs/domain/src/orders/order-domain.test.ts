@@ -1,6 +1,7 @@
-import { toClobOrderDraft } from "./order-domain";
+import { describe, expect, it } from "vitest";
+import { toClobOrderDraft } from "../index";
 
-describe("order-domain", () => {
+describe("order domain", () => {
   it("builds a Polymarket CLOB V2 order draft without deprecated V1-only fields", () => {
     const draft = toClobOrderDraft({
       amountUsd: 10,

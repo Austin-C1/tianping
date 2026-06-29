@@ -8,7 +8,8 @@
 - Full OpenAPI-generated `libs/api-client` 已完成。
 - Nx workspace migration 已完成。
 - Contracts migration 已完成。
-- 当前模块：等待开始 `libs/domain` migration。
+- Domain migration 已完成。
+- 当前模块：等待下一阶段规划。
 
 ## 已验证的运行方式
 
@@ -23,6 +24,7 @@
 - Nx OpenAPI/client targets：`npx nx run api:openapi`、`npx nx run api-client:generate`、`npx nx run api-client:typecheck`
 - Nx affected 验证：`npx nx affected -t build test`
 - Contracts build/test：`npm run build --workspace @pmx/contracts`、`npm run test --workspace @pmx/contracts`
+- Domain build/test：`npm run build --workspace @pmx/domain`、`npm run test --workspace @pmx/domain`
 
 ## 开发边界
 
@@ -33,3 +35,5 @@
 - Nx workspace migration 不移动 app/lib 目录，不改数据库 schema，不改业务行为。
 - Contracts migration 只迁移跨模块共享契约；`@pmx/shared` 暂时保留为兼容转发层。
 - Contracts migration 不创建或迁移 `libs/domain`，不改 OpenAPI/api-client 生成链路，不改业务行为。
+- Domain migration 只迁移纯领域逻辑；当前先迁移订单 CLOB draft 构建逻辑。
+- Domain migration 不接收 Nest、Prisma、repository、OpenAPI DTO 或 Web UI 组件。

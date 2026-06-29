@@ -7,6 +7,7 @@
 | Full OpenAPI-generated api-client | 已完成 | 与 API controllers/DTO 和 Web/Admin low-level clients 强绑定，需一起生成并验证 | `docs/modules/api-client.md` |
 | Nx workspace migration | 已完成 | 只改 workspace tooling 和 project metadata，不移动业务目录 | `docs/modules/nx-workspace.md` |
 | Contracts migration | 已完成 | 只迁移跨模块共享契约到 `libs/contracts`，保留 `@pmx/shared` 兼容转发 | `docs/modules/contracts.md` |
+| Domain migration | 已完成 | 只迁移纯订单域逻辑到 `libs/domain`，不改 API/OpenAPI/DB 行为 | `docs/modules/domain.md` |
 
 ## 强绑定关系
 
@@ -14,4 +15,4 @@
 - Web/Admin low-level API modules 必须通过 `@pmx/api-client`，不能直接拼后端路径。
 - Nx project metadata 必须覆盖 `web`、`admin`、`api`、`api-client`、`shared`。
 - `contracts` 由 `libs/contracts` 承载，`@pmx/shared` 只保留兼容转发。
-- `libs/domain` 是后续独立模块，不能混入 contracts migration。
+- `domain` 由 `libs/domain` 承载，API 业务服务只调用其纯领域函数，不把 Nest/Prisma/infrastructure 放入 domain。
