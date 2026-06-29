@@ -12,6 +12,18 @@
     "serve": "vite preview",
     "test": "vitest run"
   },
+  "nx": {
+    "name": "admin",
+    "tags": ["type:app", "scope:admin"],
+    "targets": {
+      "serve": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "npm run dev --workspace @pmx/admin"
+        }
+      }
+    }
+  },
   "dependencies": {
     "@pmx/api-client": "file:../../libs/api-client",
     "@ant-design/icons-vue": "latest",

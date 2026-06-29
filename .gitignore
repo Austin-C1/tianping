@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .next/
+.nx/
 coverage/
 playwright-report/
 test-results/

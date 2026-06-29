@@ -13,6 +13,25 @@
     "prisma:migrate": "node scripts/with-root-env.cjs prisma migrate dev",
     "db:seed": "node scripts/with-root-env.cjs ts-node prisma/seed.ts"
   },
+  "nx": {
+    "name": "api",
+    "tags": ["type:app", "scope:api"],
+    "targets": {
+      "openapi": {
+        "executor": "nx:run-commands",
+        "outputs": ["{projectRoot}/openapi.json"],
+        "options": {
+          "command": "npm run openapi:generate --workspace @pmx/api"
+        }
+      },
+      "serve": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "npm run start:dev --workspace @pmx/api"
+        }
+      }
+    }
+  },
   "dependencies": {
     "@nestjs/bullmq": "latest",
     "@nestjs/common": "latest",

@@ -12,6 +12,18 @@
     "test:flow": "vitest run src/flows",
     "test:flows": "vitest run src/flows"
   },
+  "nx": {
+    "name": "web",
+    "tags": ["type:app", "scope:web"],
+    "targets": {
+      "serve": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "npm run dev --workspace @pmx/web"
+        }
+      }
+    }
+  },
   "dependencies": {
     "@pmx/api-client": "file:../../libs/api-client",
     "@pmx/shared": "file:../../packages/shared",

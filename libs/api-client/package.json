@@ -16,6 +16,25 @@
     "generate": "npm run openapi:generate --workspace @pmx/api && openapi-typescript ../../apps/api/openapi.json -o src/generated/schema.ts",
     "test": "vitest run src"
   },
+  "nx": {
+    "name": "api-client",
+    "tags": ["type:lib", "scope:shared", "layer:client"],
+    "targets": {
+      "generate": {
+        "executor": "nx:run-commands",
+        "outputs": ["{projectRoot}/src/generated/schema.ts"],
+        "options": {
+          "command": "npm run generate --workspace @pmx/api-client"
+        }
+      },
+      "typecheck": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "npm run build --workspace @pmx/api-client"
+        }
+      }
+    }
+  },
   "dependencies": {
     "openapi-fetch": "^0.15.0"
   },

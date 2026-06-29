@@ -5,7 +5,8 @@
 - 当前主线以 `main` / `origin/main` 为准，不继续使用旧功能分支。
 - V2 Web Business Flow Layer 已完成。
 - API repository boundaries 已完成。
-- 当前模块：Full OpenAPI-generated `libs/api-client`。
+- Full OpenAPI-generated `libs/api-client` 已完成。
+- 当前模块：Nx workspace migration。
 
 ## 已验证的运行方式
 
@@ -15,10 +16,15 @@
 - api-client 单测：`npm run test --workspace @pmx/api-client`
 - Web flow 边界测试：`npm run test:flow --workspace @pmx/web -- ui-client-boundary.test.ts`
 - Admin API 边界测试：`npm run test --workspace @pmx/admin -- api-client-boundary.test.ts`
+- Nx 项目识别：`npx nx show projects`
+- Nx build targets：`npx nx run web:build`、`npx nx run admin:build`、`npx nx run api:build`
+- Nx OpenAPI/client targets：`npx nx run api:openapi`、`npx nx run api-client:generate`、`npx nx run api-client:typecheck`
+- Nx affected 验证：`npx nx affected -t build test`
 
 ## 开发边界
 
 - `libs/api-client` 只负责 OpenAPI 生成类型、HTTP 调用封装、base URL 和 Bearer header 处理。
 - Web module actions 和 flows 仍是业务流程边界；不要把业务编排放进 api-client。
-- 本模块不包含 Nx workspace migration。
-- 本模块不迁移 `libs/contracts` 或 `libs/domain`。
+- Nx workspace migration 只引入 Nx tooling、project metadata、target mapping 和 affected/graph 能力。
+- Nx workspace migration 不迁移 `packages/shared` 到 `libs/contracts` 或 `libs/domain`。
+- Nx workspace migration 不移动 app/lib 目录，不改数据库 schema，不改业务行为。
