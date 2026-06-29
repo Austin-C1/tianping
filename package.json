@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace @pmx/web\" \"npm run dev --workspace @pmx/admin\" \"npm run start:dev --workspace @pmx/api\"",
     "dev:admin": "npm run dev --workspace @pmx/admin",
-    "build": "npm run build --workspace @pmx/shared && npm run build --workspace @pmx/api-client && npm run build --workspace @pmx/api && npm run build --workspace @pmx/web && npm run build --workspace @pmx/admin",
+    "build": "npm run build --workspace @pmx/contracts && npm run build --workspace @pmx/shared && npm run build --workspace @pmx/api-client && npm run build --workspace @pmx/api && npm run build --workspace @pmx/web && npm run build --workspace @pmx/admin",
     "test": "npm run test:nx-workspace && npm run test --workspaces --if-present",
     "test:nx-workspace": "node --test tools/workspace/nx-workspace.test.mjs",
     "nx": "nx",

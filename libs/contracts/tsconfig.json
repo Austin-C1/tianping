@@ -3,10 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "declaration": true,
-    "paths": {
-      "@pmx/contracts": ["libs/contracts/dist/index.d.ts"]
-    }
+    "declaration": true
   },
   "include": ["src/**/*.ts"]
 }

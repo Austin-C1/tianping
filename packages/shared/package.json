@@ -5,12 +5,21 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "tsc -p tsconfig.json --noEmit"
+    "build": "npm run build --workspace @pmx/contracts && tsc -p tsconfig.json",
+    "test": "npm run build --workspace @pmx/contracts && tsc -p tsconfig.json --noEmit"
   },
   "nx": {
     "name": "shared",
     "tags": ["type:lib", "scope:shared"]
+  },
+  "dependencies": {
+    "@pmx/contracts": "file:../../libs/contracts"
   }
 }
