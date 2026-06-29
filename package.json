@@ -5,12 +5,13 @@
   "description": "Non-custodial Polymarket third-party base trading platform.",
   "workspaces": [
     "apps/*",
+    "libs/*",
     "packages/*"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace @pmx/web\" \"npm run dev --workspace @pmx/admin\" \"npm run start:dev --workspace @pmx/api\"",
     "dev:admin": "npm run dev --workspace @pmx/admin",
-    "build": "npm run build --workspace @pmx/shared && npm run build --workspace @pmx/api && npm run build --workspace @pmx/web && npm run build --workspace @pmx/admin",
+    "build": "npm run build --workspace @pmx/shared && npm run build --workspace @pmx/api-client && npm run build --workspace @pmx/api && npm run build --workspace @pmx/web && npm run build --workspace @pmx/admin",
     "test": "npm run test --workspaces --if-present",
     "test:flow": "npm run test:flow --workspace @pmx/web --",
     "test:flows": "npm run test:flows --workspace @pmx/web",

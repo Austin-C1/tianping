@@ -14,6 +14,26 @@ describe("UI client boundary", () => {
 
     expect(violations).toEqual([]);
   });
+
+  it("keeps feature clients behind the generated API client", () => {
+    const srcDir = join(dirname(fileURLToPath(import.meta.url)), "..");
+    const clientFiles = collectTsFiles(join(srcDir, "features")).filter((file) =>
+      file.endsWith("-client.ts")
+    );
+    const directHttpViolations = clientFiles
+      .filter((file) =>
+        /\bfetch\s*\(|NEXT_PUBLIC_API_BASE_URL|["']\/(admin|auth|markets|orders|wallets)\b/.test(
+          readFileSync(file, "utf8")
+        )
+      )
+      .map((file) => relative(srcDir, file));
+    const generatedClientViolations = clientFiles
+      .filter((file) => !readFileSync(file, "utf8").includes("@pmx/api-client"))
+      .map((file) => relative(srcDir, file));
+
+    expect(directHttpViolations).toEqual([]);
+    expect(generatedClientViolations).toEqual([]);
+  });
 });
 
 function collectTsxFiles(directory: string): string[] {
@@ -26,5 +46,18 @@ function collectTsxFiles(directory: string): string[] {
     }
 
     return fullPath.endsWith(".tsx") ? [fullPath] : [];
+  });
+}
+
+function collectTsFiles(directory: string): string[] {
+  return readdirSync(directory).flatMap((entry) => {
+    const fullPath = join(directory, entry);
+    const stat = statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      return collectTsFiles(fullPath);
+    }
+
+    return fullPath.endsWith(".ts") ? [fullPath] : [];
   });
 }

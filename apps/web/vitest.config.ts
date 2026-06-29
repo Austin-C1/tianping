@@ -15,6 +15,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@pmx/api-client": new URL("../../libs/api-client/src/index.ts", import.meta.url).pathname,
       "@pmx/shared": new URL("../../packages/shared/src/index.ts", import.meta.url).pathname
     }
   }

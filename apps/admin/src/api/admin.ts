@@ -1,75 +1,39 @@
-import { get } from './http'
-import { post } from './http'
+import type {
+  AdminGate,
+  AdminSummary,
+  ManagedUser,
+  MarketSyncResult,
+  OrderRouterEnvironment
+} from '@pmx/api-client'
+import { createAdminApiClient, runAdminApiRequest } from './http'
 
-export interface AdminSummary {
-  registeredUsers: number
-  adminUsers: number
-  walletsConnected: number
-  marketsSynced: number
-  latestMarketSyncedAt: string | null
-  marketQuotesSynced: number
-  latestMarketQuoteSyncedAt: string | null
-  ordersPreviewed: number
-  openRiskEvents: number
+export type {
+  AdminGate,
+  AdminSummary,
+  ManagedUser,
+  MarketSyncResult,
+  OrderRouterEnvironment
+} from '@pmx/api-client'
+
+export type AdminGateStatus = AdminGate['status']
+export type OrderRouterMode = OrderRouterEnvironment['mode']
+
+export function fetchAdminUsers(): Promise<ManagedUser[]> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.listUsers())
 }
 
-export type AdminGateStatus = 'READY' | 'PENDING' | 'BLOCKED'
-
-export interface AdminGate {
-  key: string
-  title: string
-  owner: string
-  status: AdminGateStatus
-  updatedAt: string | null
-  details?: string | null
+export function fetchAdminSummary(): Promise<AdminSummary> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.getSummary())
 }
 
-export type OrderRouterMode = 'preview' | 'paper' | 'live'
-
-export interface OrderRouterEnvironment {
-  mode: OrderRouterMode
-  clobHost: string
-  chainId: number | null
-  builderCodeConfigured: boolean
-  relayerConfigured: boolean
-  rpcConfigured: boolean
-  liveTradingEnabled: boolean
+export function fetchAdminGates(): Promise<AdminGate[]> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.getGates())
 }
 
-export interface ManagedUser {
-  id: string
-  email: string
-  role: 'ADMIN' | 'USER'
-  createdAt: string
-  walletCount: number
-  walletStatus: 'CONNECTED' | 'NOT_CONNECTED'
-  primaryWalletAddress: string | null
+export function fetchAdminEnvironment(): Promise<OrderRouterEnvironment> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.getEnvironment())
 }
 
-export function fetchAdminUsers() {
-  return get<ManagedUser[]>('/admin/users')
-}
-
-export function fetchAdminSummary() {
-  return get<AdminSummary>('/admin/summary')
-}
-
-export function fetchAdminGates() {
-  return get<AdminGate[]>('/admin/gates')
-}
-
-export function fetchAdminEnvironment() {
-  return get<OrderRouterEnvironment>('/admin/environment')
-}
-
-export interface MarketSyncResult {
-  synced: number
-  failed: number
-  quotesSynced: number
-  quotesFailed: number
-  error?: string
-}
-
-export function syncMarkets() {
-  return post<MarketSyncResult, Record<string, never>>('/admin/markets/sync', {})
+export function syncMarkets(): Promise<MarketSyncResult> {
+  return runAdminApiRequest(() => createAdminApiClient().markets.sync())
 }

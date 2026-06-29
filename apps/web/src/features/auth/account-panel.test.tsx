@@ -48,13 +48,13 @@ describe("AccountPanel", () => {
     vi.spyOn(authActions, "loadAuthenticatedUser").mockResolvedValue({
       id: "user_123",
       email: "person@example.com",
-      role: "TRADER"
+      role: "USER"
     });
 
     renderAccountPanel();
 
     expect(await screen.findByText("person@example.com")).toBeInTheDocument();
-    expect(screen.getByText("TRADER")).toBeInTheDocument();
+    expect(screen.getByText("USER")).toBeInTheDocument();
   });
 
   it("shows account, wallet, deposit wallet, balance, and risk sections", async () => {

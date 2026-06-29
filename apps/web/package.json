@@ -13,6 +13,7 @@
     "test:flows": "vitest run src/flows"
   },
   "dependencies": {
+    "@pmx/api-client": "file:../../libs/api-client",
     "@pmx/shared": "file:../../packages/shared",
     "next": "latest",
     "react": "latest",

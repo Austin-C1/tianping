@@ -11,6 +11,7 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
+      "@pmx/api-client": ["libs/api-client/src/index.ts"],
       "@pmx/shared": ["packages/shared/src/index.ts"]
     }
   }

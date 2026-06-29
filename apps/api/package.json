@@ -8,6 +8,7 @@
     "start:dev": "nest start --watch",
     "build": "nest build",
     "test": "jest --runInBand",
+    "openapi:generate": "ts-node -r tsconfig-paths/register scripts/generate-openapi.ts",
     "prisma:generate": "node scripts/with-root-env.cjs prisma generate",
     "prisma:migrate": "node scripts/with-root-env.cjs prisma migrate dev",
     "db:seed": "node scripts/with-root-env.cjs ts-node prisma/seed.ts"
@@ -18,6 +19,7 @@
     "@nestjs/config": "latest",
     "@nestjs/core": "latest",
     "@nestjs/platform-express": "latest",
+    "@nestjs/swagger": "^11.4.4",
     "@polymarket/builder-relayer-client": "^0.0.10",
     "@polymarket/clob-client-v2": "^1.0.6",
     "@prisma/client": "6.19.3",
