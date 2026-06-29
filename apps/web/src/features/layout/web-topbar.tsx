@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  clearAccessToken,
-  getCurrentUser,
-  readAccessToken,
+  hasStoredSession,
+  loadAuthenticatedUser,
+  signOut,
   type AuthUser
-} from "../auth/auth-client";
+} from "../auth/auth-actions";
 import { LanguageSwitcher } from "../i18n/language-switcher";
 import { useLanguage } from "../i18n/language-provider";
 
@@ -20,12 +20,12 @@ export function WebTopbar() {
   const [session, setSession] = useState<SessionState>({ status: "anonymous" });
 
   useEffect(() => {
-    if (!readAccessToken()) {
+    if (!hasStoredSession()) {
       setSession({ status: "anonymous" });
       return;
     }
 
-    getCurrentUser()
+    loadAuthenticatedUser()
       .then((user) => setSession({ status: "authenticated", user }))
       .catch(() => setSession({ status: "anonymous" }));
   }, []);
@@ -53,7 +53,7 @@ export function WebTopbar() {
             <button
               type="button"
               onClick={() => {
-                clearAccessToken();
+                signOut();
                 setSession({ status: "anonymous" });
               }}
             >

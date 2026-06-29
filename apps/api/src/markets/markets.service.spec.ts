@@ -1,4 +1,4 @@
-import { ForbiddenException } from "@nestjs/common";
+﻿import { ForbiddenException } from "@nestjs/common";
 import { MarketsService, type PolymarketMarketSource } from "./markets.service";
 
 describe("MarketsService", () => {
@@ -17,8 +17,8 @@ describe("MarketsService", () => {
     items: PolymarketMarketSource[],
     books: unknown[] = []
   ) => ({
-    fetchActiveMarkets: jest.fn().mockResolvedValue(items),
-    fetchOrderBooks: jest.fn().mockResolvedValue(books)
+    listActiveMarkets: jest.fn().mockResolvedValue(items),
+    getOrderBooks: jest.fn().mockResolvedValue(books)
   });
 
   it("syncs open Polymarket markets and CLOB quote snapshots", async () => {
@@ -85,8 +85,8 @@ describe("MarketsService", () => {
       quotesSynced: 2,
       quotesFailed: 0
     });
-    expect(client.fetchActiveMarkets).toHaveBeenCalledWith();
-    expect(client.fetchOrderBooks).toHaveBeenCalledWith(["token_yes", "token_no"]);
+    expect(client.listActiveMarkets).toHaveBeenCalledWith();
+    expect(client.getOrderBooks).toHaveBeenCalledWith(["token_yes", "token_no"]);
     expect(prisma.marketSnapshot.upsert).toHaveBeenCalledWith({
       where: { marketId: "market_1" },
       update: {
@@ -166,7 +166,7 @@ describe("MarketsService", () => {
         outcomes: '["Yes","No"]'
       }
     ]);
-    client.fetchOrderBooks.mockRejectedValue(new Error("CLOB unavailable"));
+    client.getOrderBooks.mockRejectedValue(new Error("CLOB unavailable"));
     const service = new MarketsService(prisma as never, client as never);
 
     await expect(service.syncActiveMarkets({ role: "ADMIN" })).resolves.toEqual({
@@ -202,7 +202,7 @@ describe("MarketsService", () => {
       quotesFailed: 0,
       error: "Snapshot write failed"
     });
-    expect(client.fetchOrderBooks).not.toHaveBeenCalled();
+    expect(client.getOrderBooks).not.toHaveBeenCalled();
   });
 
   it("reports missing quote book failure reasons", async () => {
@@ -262,7 +262,7 @@ describe("MarketsService", () => {
         asks: [{ price: "0.60", size: "10" }]
       }))
     );
-    client.fetchOrderBooks
+    client.getOrderBooks
       .mockResolvedValueOnce(
         Array.from({ length: 40 }, (_, index) => ({
           asset_id: `token_${index}`,
@@ -286,11 +286,11 @@ describe("MarketsService", () => {
       quotesFailed: 0
     });
     expect(prisma.marketSnapshot.upsert).toHaveBeenCalledTimes(55);
-    expect(client.fetchOrderBooks).toHaveBeenNthCalledWith(
+    expect(client.getOrderBooks).toHaveBeenNthCalledWith(
       1,
       Array.from({ length: 40 }, (_, index) => `token_${index}`)
     );
-    expect(client.fetchOrderBooks).toHaveBeenNthCalledWith(
+    expect(client.getOrderBooks).toHaveBeenNthCalledWith(
       2,
       Array.from({ length: 15 }, (_, index) => `token_${index + 40}`)
     );
@@ -304,14 +304,14 @@ describe("MarketsService", () => {
     await expect(service.syncActiveMarkets({ role: "USER" })).rejects.toBeInstanceOf(
       ForbiddenException
     );
-    expect(client.fetchActiveMarkets).not.toHaveBeenCalled();
+    expect(client.listActiveMarkets).not.toHaveBeenCalled();
   });
 
   it("returns sync failure details when Gamma is unreachable", async () => {
     const prisma = createPrisma();
     const client = {
-      fetchActiveMarkets: jest.fn().mockRejectedValue(new Error("Connect Timeout")),
-      fetchOrderBooks: jest.fn()
+      listActiveMarkets: jest.fn().mockRejectedValue(new Error("Connect Timeout")),
+      getOrderBooks: jest.fn()
     };
     const service = new MarketsService(prisma as never, client as never);
 

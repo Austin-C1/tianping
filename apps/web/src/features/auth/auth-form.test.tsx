@@ -2,58 +2,65 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LanguageProvider } from "../i18n/language-provider";
+import * as authActions from "./auth-actions";
 import { AuthForm } from "./auth-form";
-import * as authClient from "./auth-client";
 
 describe("AuthForm", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     window.localStorage.clear();
+    window.localStorage.setItem("pmx.locale", "en");
   });
 
-  it("registers and stores the returned access token", async () => {
-    vi.spyOn(authClient, "register").mockResolvedValue({
+  it("registers through auth actions", async () => {
+    const registerAndStoreSession = vi.spyOn(authActions, "registerAndStoreSession").mockResolvedValue({
       accessToken: "token",
       user: { id: "user_123", email: "person@example.com" }
     });
-    const saveAccessToken = vi.spyOn(authClient, "saveAccessToken");
 
     renderAuthForm(<AuthForm mode="register" />);
-    fireEvent.change(screen.getByLabelText("邮箱"), {
+    fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "person@example.com" }
     });
-    fireEvent.change(screen.getByLabelText("密码"), {
+    fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "long-enough-password" }
     });
-    fireEvent.click(screen.getByRole("button", { name: "注册" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
-    await waitFor(() => expect(saveAccessToken).toHaveBeenCalledWith("token"));
-    expect(screen.getByText("已注册并登录：person@example.com")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(registerAndStoreSession).toHaveBeenCalledWith({
+        email: "person@example.com",
+        password: "long-enough-password"
+      })
+    );
+    expect(screen.getByText("Registered and signed in: person@example.com")).toBeInTheDocument();
   });
 
-  it("logs in and stores the returned access token", async () => {
-    vi.spyOn(authClient, "login").mockResolvedValue({
+  it("logs in through auth actions", async () => {
+    const loginAndStoreSession = vi.spyOn(authActions, "loginAndStoreSession").mockResolvedValue({
       accessToken: "token",
       user: { id: "user_123", email: "person@example.com" }
     });
-    const saveAccessToken = vi.spyOn(authClient, "saveAccessToken");
 
     renderAuthForm(<AuthForm mode="login" />);
-    fireEvent.change(screen.getByLabelText("邮箱"), {
+    fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "person@example.com" }
     });
-    fireEvent.change(screen.getByLabelText("密码"), {
+    fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "long-enough-password" }
     });
-    fireEvent.click(screen.getByRole("button", { name: "登录" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
-    await waitFor(() => expect(saveAccessToken).toHaveBeenCalledWith("token"));
-    expect(screen.getByText("已登录：person@example.com")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(loginAndStoreSession).toHaveBeenCalledWith({
+        email: "person@example.com",
+        password: "long-enough-password"
+      })
+    );
+    expect(screen.getByText("Signed in: person@example.com")).toBeInTheDocument();
   });
 
   it("uses persisted English labels", async () => {
-    window.localStorage.setItem("pmx.locale", "en");
-
     renderAuthForm(<AuthForm mode="login" />);
 
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();

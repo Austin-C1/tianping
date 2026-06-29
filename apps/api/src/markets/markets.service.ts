@@ -1,28 +1,18 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import {
+  MARKET_PROVIDER,
+  type MarketProvider,
+  type ProviderMarketSource,
+  type ProviderOrderBookSource
+} from "../infrastructure/market-providers/provider.types";
 import { PrismaService } from "../prisma/prisma.service";
-import { type ClobOrderBookSource, PolymarketClient } from "./polymarket.client";
 
 interface Operator {
   role: "USER" | "ADMIN";
 }
 
-export interface PolymarketMarketSource {
-  id?: string | number;
-  conditionId?: string;
-  slug?: string | null;
-  question?: string | null;
-  active?: boolean;
-  closed?: boolean;
-  enableOrderBook?: boolean;
-  clobTokenIds?: unknown;
-  category?: string | null;
-  outcomes?: unknown;
-  outcomePrices?: unknown;
-  volume?: string | number | null;
-  volume24hr?: string | number | null;
-  liquidity?: string | number | null;
-}
+export type PolymarketMarketSource = ProviderMarketSource;
 
 export interface MarketQuoteItem {
   outcome: string;
@@ -89,7 +79,7 @@ const CLOB_BOOK_BATCH_SIZE = 40;
 export class MarketsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly polymarketClient: PolymarketClient
+    @Inject(MARKET_PROVIDER) private readonly marketProvider: MarketProvider
   ) {}
 
   async syncActiveMarkets(operator: Operator) {
@@ -99,7 +89,7 @@ export class MarketsService {
 
     let markets: PolymarketMarketSource[];
     try {
-      markets = await this.polymarketClient.fetchActiveMarkets();
+      markets = await this.marketProvider.listActiveMarkets();
     } catch (error) {
       return {
         synced: 0,
@@ -219,9 +209,9 @@ export class MarketsService {
     let firstError: string | undefined;
 
     for (const batch of this.chunk(quoteRequests, CLOB_BOOK_BATCH_SIZE)) {
-      let books: ClobOrderBookSource[];
+      let books: ProviderOrderBookSource[];
       try {
-        books = await this.polymarketClient.fetchOrderBooks(batch.map((quote) => quote.tokenId));
+        books = await this.marketProvider.getOrderBooks(batch.map((quote) => quote.tokenId));
       } catch (error) {
         failed += batch.length;
         firstError ??= error instanceof Error ? error.message : "CLOB quote sync failed";
@@ -240,7 +230,7 @@ export class MarketsService {
 
   private async upsertQuoteBatch(
     quoteRequests: QuoteRequest[],
-    booksByToken: Map<string, ClobOrderBookSource>
+    booksByToken: Map<string, ProviderOrderBookSource>
   ) {
     let synced = 0;
     let failed = 0;
@@ -335,7 +325,7 @@ export class MarketsService {
     };
   }
 
-  private normalizeOrderBook(book: ClobOrderBookSource) {
+  private normalizeOrderBook(book: ProviderOrderBookSource) {
     const bestBid = this.bestBid(book.bids ?? []);
     const bestAsk = this.bestAsk(book.asks ?? []);
     const midpoint = bestBid !== null && bestAsk !== null ? (bestBid + bestAsk) / 2 : null;

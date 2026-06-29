@@ -2,31 +2,31 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LanguageProvider } from "../i18n/language-provider";
 import { WalletPanel } from "./wallet-panel";
-import * as walletClient from "./wallet-client";
+import * as walletActions from "./wallet-actions";
 
-vi.mock("./wallet-client");
+vi.mock("./wallet-actions");
 
 describe("WalletPanel", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.mocked(walletClient.createDepositWalletIntent).mockReset();
-    vi.mocked(walletClient.getDepositWalletStatus).mockReset();
-    vi.mocked(walletClient.getWalletReadiness).mockReset();
-    vi.mocked(walletClient.refreshBalanceAllowance).mockReset();
-    vi.mocked(walletClient.requestWalletChallenge).mockReset();
-    vi.mocked(walletClient.submitDepositWalletSignedBatch).mockReset();
-    vi.mocked(walletClient.verifyWallet).mockReset();
+    vi.mocked(walletActions.createDepositWalletIntent).mockReset();
+    vi.mocked(walletActions.getDepositWalletStatus).mockReset();
+    vi.mocked(walletActions.getWalletReadiness).mockReset();
+    vi.mocked(walletActions.refreshBalanceAllowance).mockReset();
+    vi.mocked(walletActions.requestWalletChallenge).mockReset();
+    vi.mocked(walletActions.submitDepositWalletSignedBatch).mockReset();
+    vi.mocked(walletActions.verifyWallet).mockReset();
     Object.defineProperty(window, "ethereum", {
       configurable: true,
       value: undefined
     });
     window.localStorage.clear();
     window.localStorage.setItem("pmx.locale", "en");
-    vi.mocked(walletClient.getDepositWalletStatus).mockResolvedValue(null);
+    vi.mocked(walletActions.getDepositWalletStatus).mockResolvedValue(null);
   });
 
   it("shows disconnected wallet readiness", async () => {
-    vi.mocked(walletClient.getWalletReadiness).mockResolvedValue(disconnectedReadiness());
+    vi.mocked(walletActions.getWalletReadiness).mockResolvedValue(disconnectedReadiness());
 
     renderWalletPanel();
 
@@ -45,7 +45,7 @@ describe("WalletPanel", () => {
   });
 
   it("shows connected EOA wallet details", async () => {
-    vi.mocked(walletClient.getWalletReadiness).mockResolvedValue({
+    vi.mocked(walletActions.getWalletReadiness).mockResolvedValue({
       ...disconnectedReadiness(),
       eoa: {
         address: "0x0000000000000000000000000000000000000001",
@@ -63,7 +63,7 @@ describe("WalletPanel", () => {
   });
 
   it("shows Deposit Wallet address, owner, and relayer status", async () => {
-    vi.mocked(walletClient.getWalletReadiness).mockResolvedValue({
+    vi.mocked(walletActions.getWalletReadiness).mockResolvedValue({
       ...disconnectedReadiness(),
       depositWallet: {
         address: "0x2222222222222222222222222222222222222222",
@@ -71,7 +71,7 @@ describe("WalletPanel", () => {
         status: "READY"
       }
     });
-    vi.mocked(walletClient.getDepositWalletStatus).mockResolvedValue({
+    vi.mocked(walletActions.getDepositWalletStatus).mockResolvedValue({
       address: "0x2222222222222222222222222222222222222222",
       chainId: 137,
       latestOperation: {
@@ -102,7 +102,7 @@ describe("WalletPanel", () => {
   });
 
   it("shows Deposit Wallet relayer failure reasons in Account", async () => {
-    vi.mocked(walletClient.getWalletReadiness).mockResolvedValue({
+    vi.mocked(walletActions.getWalletReadiness).mockResolvedValue({
       ...disconnectedReadiness(),
       depositWallet: {
         address: null,
@@ -110,7 +110,7 @@ describe("WalletPanel", () => {
         status: "FAILED"
       }
     });
-    vi.mocked(walletClient.getDepositWalletStatus).mockResolvedValue({
+    vi.mocked(walletActions.getDepositWalletStatus).mockResolvedValue({
       address: null,
       chainId: 137,
       latestOperation: {
@@ -139,7 +139,7 @@ describe("WalletPanel", () => {
   });
 
   it("shows pUSD balance, allowance, cache time, and refreshes funding", async () => {
-    vi.mocked(walletClient.getWalletReadiness)
+    vi.mocked(walletActions.getWalletReadiness)
       .mockResolvedValueOnce({
         ...disconnectedReadiness(),
         funding: {
@@ -179,7 +179,7 @@ describe("WalletPanel", () => {
         },
         gates: []
       });
-    vi.mocked(walletClient.refreshBalanceAllowance).mockResolvedValue({
+    vi.mocked(walletActions.refreshBalanceAllowance).mockResolvedValue({
       allowance: "100",
       balanceCacheStale: false,
       balanceCacheUpdatedAt: "2026-06-25T10:01:00.000Z",
@@ -202,7 +202,7 @@ describe("WalletPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Refresh balance" }));
 
     await waitFor(() => {
-      expect(walletClient.refreshBalanceAllowance).toHaveBeenCalledWith();
+      expect(walletActions.refreshBalanceAllowance).toHaveBeenCalledWith();
     });
     expect(await screen.findByText("READY")).toBeInTheDocument();
   });
@@ -217,7 +217,7 @@ describe("WalletPanel", () => {
       configurable: true,
       value: ethereum
     });
-    vi.mocked(walletClient.getWalletReadiness)
+    vi.mocked(walletActions.getWalletReadiness)
       .mockResolvedValueOnce({
         ...disconnectedReadiness(),
         eoa: {
@@ -241,7 +241,7 @@ describe("WalletPanel", () => {
         },
         gates: []
       });
-    vi.mocked(walletClient.createDepositWalletIntent).mockResolvedValue({
+    vi.mocked(walletActions.createDepositWalletIntent).mockResolvedValue({
       action: "CREATE_DEPOSIT_WALLET",
       chainId: 137,
       depositWalletAddress: "0x2222222222222222222222222222222222222222",
@@ -259,7 +259,7 @@ describe("WalletPanel", () => {
         ownerAddress: "0x0000000000000000000000000000000000000001"
       }
     });
-    vi.mocked(walletClient.submitDepositWalletSignedBatch).mockResolvedValue({
+    vi.mocked(walletActions.submitDepositWalletSignedBatch).mockResolvedValue({
       depositWalletAddress: "0x2222222222222222222222222222222222222222",
       failureReason: null,
       operationId: "wallet_operation_1",
@@ -277,7 +277,7 @@ describe("WalletPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sign and submit Deposit Wallet batch" }));
 
     await waitFor(() => {
-      expect(walletClient.submitDepositWalletSignedBatch).toHaveBeenCalledWith({
+      expect(walletActions.submitDepositWalletSignedBatch).toHaveBeenCalledWith({
         operationId: "wallet_operation_1",
         signedBatch: {
           ownerSignature: "0xsig",
@@ -299,7 +299,7 @@ describe("WalletPanel", () => {
   });
 
   it("shows a clear message when no browser wallet provider exists", async () => {
-    vi.mocked(walletClient.getWalletReadiness).mockResolvedValue(disconnectedReadiness());
+    vi.mocked(walletActions.getWalletReadiness).mockResolvedValue(disconnectedReadiness());
 
     renderWalletPanel();
 
@@ -320,7 +320,7 @@ describe("WalletPanel", () => {
       configurable: true,
       value: ethereum
     });
-    vi.mocked(walletClient.getWalletReadiness)
+    vi.mocked(walletActions.getWalletReadiness)
       .mockResolvedValueOnce(disconnectedReadiness())
       .mockResolvedValueOnce({
         ...disconnectedReadiness(),
@@ -330,12 +330,12 @@ describe("WalletPanel", () => {
           status: "CONNECTED"
         }
       });
-    vi.mocked(walletClient.requestWalletChallenge).mockResolvedValue({
+    vi.mocked(walletActions.requestWalletChallenge).mockResolvedValue({
       expiresAt: "2026-06-24T12:10:00.000Z",
       message: "PMX wallet binding\nNonce: nonce_1",
       nonce: "nonce_1"
     });
-    vi.mocked(walletClient.verifyWallet).mockResolvedValue({
+    vi.mocked(walletActions.verifyWallet).mockResolvedValue({
       address: "0x0000000000000000000000000000000000000001",
       chainId: 137,
       status: "CONNECTED"
@@ -346,7 +346,7 @@ describe("WalletPanel", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Connect wallet" }));
 
     await waitFor(() => {
-      expect(walletClient.verifyWallet).toHaveBeenCalledWith({
+      expect(walletActions.verifyWallet).toHaveBeenCalledWith({
         address: "0x0000000000000000000000000000000000000001",
         chainId: 137,
         nonce: "nonce_1",
@@ -371,7 +371,7 @@ function renderWalletPanel() {
   );
 }
 
-function disconnectedReadiness(): walletClient.WalletReadiness {
+function disconnectedReadiness(): walletActions.WalletReadiness {
   return {
     canPreview: true,
     canSign: false,

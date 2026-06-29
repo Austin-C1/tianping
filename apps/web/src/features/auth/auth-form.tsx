@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useLanguage } from "../i18n/language-provider";
-import { login, register, saveAccessToken } from "./auth-client";
+import { loginAndStoreSession, registerAndStoreSession } from "./auth-actions";
 
 type AuthMode = "login" | "register";
 
@@ -29,9 +29,8 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       const result = isRegister
-        ? await register({ email, password })
-        : await login({ email, password });
-      saveAccessToken(result.accessToken);
+        ? await registerAndStoreSession({ email, password })
+        : await loginAndStoreSession({ email, password });
       setMessage(
         `${isRegister ? copy.registerSuccess : copy.loginSuccess}${result.user.email}`
       );
