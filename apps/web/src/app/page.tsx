@@ -11,7 +11,7 @@ import {
   localizeMarketQuestion,
   localizeOutcome
 } from "../features/markets/market-localization";
-import { fetchMarkets, type MarketListItem } from "../features/markets/markets-client";
+import { listMarkets, type MarketListItem } from "../features/markets/markets-actions";
 
 type MarketStatusKey = "loading" | "connected" | "waiting" | "unavailable";
 type ReadinessTone = "pending" | "blocked";
@@ -49,7 +49,7 @@ export default function Home() {
     setMarketStatusKey("loading");
 
     try {
-      const items = await fetchMarkets();
+      const items = await listMarkets();
       setMarkets(items);
       setMarketStatusKey(items.length > 0 ? "connected" : "waiting");
     } catch {

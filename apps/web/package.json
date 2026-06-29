@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "tsc -p tsconfig.json --noEmit --incremental false",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:flow": "vitest run src/flows",
+    "test:flows": "vitest run src/flows"
   },
   "dependencies": {
     "@pmx/shared": "file:../../packages/shared",

@@ -14,13 +14,13 @@ import {
   type OrderSide,
   type OrderTicketPreview
 } from "../trading/order-ticket";
-import { previewOrder } from "../trading/order-preview-client";
+import { previewOrderForMarket } from "../../flows/trade.flow";
 import {
   localizeMarketCategory,
   localizeMarketQuestion,
   localizeOutcome
 } from "./market-localization";
-import { fetchMarkets, type MarketListItem } from "./markets-client";
+import { listMarkets, type MarketListItem } from "./markets-actions";
 
 interface MarketDetailPageProps {
   initialMarketId: string;
@@ -94,7 +94,7 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
   const lastActivityKey = useRef("");
 
   useEffect(() => {
-    fetchMarkets()
+    listMarkets()
       .then((items) => {
         setMarkets(items);
         setStatus("ready");
@@ -157,9 +157,9 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
         outcome: preview.outcome,
         price: preview.price
       });
-      void previewOrder({
+      void previewOrderForMarket({
         amountUsd: preview.amountUsd,
-        marketId: selectedMarket.source.marketId,
+        market: selectedMarket.source,
         outcomeIndex,
         orderType: "FAK"
       })
