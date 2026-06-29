@@ -1,7 +1,16 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
 import { getAddress } from "viem";
-import { PrismaService } from "../prisma/prisma.service";
+import {
+  DEPOSIT_WALLETS_REPOSITORY,
+  WALLETS_REPOSITORY
+} from "../infrastructure/repositories/repository.tokens";
+import type {
+  DepositWalletRecord,
+  DepositWalletsRepository,
+  RelayerTransactionRecord,
+  WalletOperationRecord,
+  WalletsRepository
+} from "../infrastructure/repositories/repository.types";
 import type { CreateDepositWalletIntentDto, SubmitDepositWalletSignedBatchDto } from "./dto/deposit-wallet.dto";
 import {
   DEPOSIT_WALLET_RELAYER,
@@ -15,45 +24,6 @@ interface Operator {
 
 type DepositWalletStatus = "NOT_CREATED" | "INTENT_CREATED" | "PENDING" | "READY" | "FAILED";
 type WalletOperationStatus = "INTENT_CREATED" | "SUBMITTED" | "FAILED";
-
-interface DepositWalletRecord {
-  id: string;
-  ownerAddress: string;
-  address: string | null;
-  chainId: number;
-  status: string;
-  updatedAt: Date;
-}
-
-interface WalletOperationRecord {
-  id: string;
-  type: string;
-  status: string;
-  failureReason: string | null;
-  updatedAt: Date;
-}
-
-interface RelayerTransactionRecord {
-  id: string;
-  relayerTransactionId: string | null;
-  status: string;
-  failureReason: string | null;
-  updatedAt: Date;
-}
-
-interface PrismaDelegate {
-  create(args: object): Promise<any>;
-  findFirst(args: object): Promise<any>;
-  update(args: object): Promise<any>;
-  upsert(args: object): Promise<any>;
-}
-
-interface DepositWalletPrisma {
-  depositWallet: PrismaDelegate;
-  relayerTransaction: PrismaDelegate;
-  wallet: Pick<PrismaDelegate, "findFirst">;
-  walletOperation: PrismaDelegate;
-}
 
 export interface DepositWalletIntentResult {
   action: "CREATE_DEPOSIT_WALLET";
@@ -94,7 +64,10 @@ const SENSITIVE_KEYS = new Set(["privatekey", "private_key", "mnemonic", "seed",
 @Injectable()
 export class DepositWalletService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(WALLETS_REPOSITORY)
+    private readonly walletsRepository: WalletsRepository,
+    @Inject(DEPOSIT_WALLETS_REPOSITORY)
+    private readonly depositWalletsRepository: DepositWalletsRepository,
     @Inject(DEPOSIT_WALLET_RELAYER)
     private readonly relayer: DepositWalletRelayer
   ) {}
@@ -115,44 +88,26 @@ export class DepositWalletService {
       chainId: input.chainId,
       ownerAddress
     });
-    const existingDepositWallet = await this.findDepositWalletByOwner(ownerAddress, input.chainId, operator);
+    const existingDepositWallet = await this.depositWalletsRepository.findDepositWalletByOwner({
+      chainId: input.chainId,
+      ownerAddress,
+      userId: operator.userId
+    });
     const depositWallet = this.isReadyDepositWallet(existingDepositWallet)
       ? existingDepositWallet
-      : await this.db.depositWallet.upsert({
-          create: {
-            address: preparedBatch.depositWalletAddress,
-            chainId: input.chainId,
-            ownerAddress,
-            raw: this.inputJson(typedData),
-            status: "INTENT_CREATED",
-            userId: operator.userId
-          },
-          update: {
-            address: preparedBatch.depositWalletAddress,
-            failureReason: null,
-            raw: this.inputJson(typedData),
-            status: "INTENT_CREATED"
-          },
-          where: {
-            userId_ownerAddress_chainId: {
-              chainId: input.chainId,
-              ownerAddress,
-              userId: operator.userId
-            }
-          }
+      : await this.depositWalletsRepository.upsertDepositWalletIntent({
+          address: preparedBatch.depositWalletAddress,
+          chainId: input.chainId,
+          ownerAddress,
+          raw: typedData,
+          userId: operator.userId
         });
-    const operation = await this.db.walletOperation.create({
-      data: {
-        depositWalletId: depositWallet.id,
-        intentPayload: this.inputJson(typedData),
-        status: "INTENT_CREATED",
-        type: CREATE_DEPOSIT_WALLET,
-        userId: operator.userId
-      },
-      select: {
-        id: true,
-        status: true
-      }
+    const operation = await this.depositWalletsRepository.createWalletOperation({
+      depositWalletId: depositWallet.id,
+      intentPayload: typedData,
+      status: "INTENT_CREATED",
+      type: CREATE_DEPOSIT_WALLET,
+      userId: operator.userId
     });
 
     return {
@@ -171,17 +126,10 @@ export class DepositWalletService {
     input: SubmitDepositWalletSignedBatchDto,
     operator: Operator
   ): Promise<DepositWalletSubmitResult> {
-    const operation = await this.db.walletOperation.findFirst({
-      select: {
-        depositWalletId: true,
-        id: true,
-        status: true
-      },
-      where: {
-        id: input.operationId,
-        type: CREATE_DEPOSIT_WALLET,
-        userId: operator.userId
-      }
+    const operation = await this.depositWalletsRepository.findWalletOperationForUser({
+      operationId: input.operationId,
+      type: CREATE_DEPOSIT_WALLET,
+      userId: operator.userId
     });
 
     if (!operation?.depositWalletId) {
@@ -193,25 +141,19 @@ export class DepositWalletService {
     try {
       const relayerResult = await this.relayer.submitSignedBatch(signedBatch);
 
-      await this.db.walletOperation.update({
-        data: {
-          failureReason: null,
-          signedPayload: this.inputJson(signedBatch),
-          status: "SUBMITTED"
-        },
-        where: { id: operation.id }
+      await this.depositWalletsRepository.markWalletOperationSubmitted({
+        operationId: operation.id,
+        signedPayload: signedBatch
       });
       await this.updateDepositWalletAfterRelayer(operation.depositWalletId, relayerResult, null);
-      await this.db.relayerTransaction.create({
-        data: {
-          depositWalletId: operation.depositWalletId,
-          failureReason: null,
-          raw: this.inputJsonObject(relayerResult.raw),
-          relayerTransactionId: relayerResult.relayerTransactionId,
-          status: relayerResult.status,
-          userId: operator.userId,
-          walletOperationId: operation.id
-        }
+      await this.depositWalletsRepository.createRelayerTransaction({
+        depositWalletId: operation.depositWalletId,
+        failureReason: null,
+        raw: relayerResult.raw,
+        relayerTransactionId: relayerResult.relayerTransactionId,
+        status: relayerResult.status,
+        userId: operator.userId,
+        walletOperationId: operation.id
       });
 
       return {
@@ -224,25 +166,20 @@ export class DepositWalletService {
     } catch (error) {
       const failureReason = this.errorMessage(error);
 
-      await this.db.walletOperation.update({
-        data: {
-          failureReason,
-          signedPayload: this.inputJson(signedBatch),
-          status: "FAILED"
-        },
-        where: { id: operation.id }
+      await this.depositWalletsRepository.markWalletOperationFailed({
+        failureReason,
+        operationId: operation.id,
+        signedPayload: signedBatch
       });
       await this.markDepositWalletFailed(operation.depositWalletId, failureReason);
-      await this.db.relayerTransaction.create({
-        data: {
-          depositWalletId: operation.depositWalletId,
-          failureReason,
-          raw: this.inputJsonObject({ error: failureReason }),
-          relayerTransactionId: null,
-          status: "FAILED",
-          userId: operator.userId,
-          walletOperationId: operation.id
-        }
+      await this.depositWalletsRepository.createRelayerTransaction({
+        depositWalletId: operation.depositWalletId,
+        failureReason,
+        raw: { error: failureReason },
+        relayerTransactionId: null,
+        status: "FAILED",
+        userId: operator.userId,
+        walletOperationId: operation.id
       });
 
       return {
@@ -256,18 +193,7 @@ export class DepositWalletService {
   }
 
   async getStatus(operator: Operator): Promise<DepositWalletStatusResult> {
-    const depositWallet = await this.db.depositWallet.findFirst({
-      orderBy: { updatedAt: "desc" },
-      select: {
-        address: true,
-        chainId: true,
-        id: true,
-        ownerAddress: true,
-        status: true,
-        updatedAt: true
-      },
-      where: { userId: operator.userId }
-    });
+    const depositWallet = await this.depositWalletsRepository.findLatestDepositWallet(operator.userId);
 
     if (!depositWallet) {
       return {
@@ -282,33 +208,13 @@ export class DepositWalletService {
     }
 
     const [latestOperation, latestRelayerTransaction] = await Promise.all([
-      this.db.walletOperation.findFirst({
-        orderBy: { updatedAt: "desc" },
-        select: {
-          failureReason: true,
-          id: true,
-          status: true,
-          type: true,
-          updatedAt: true
-        },
-        where: {
-          depositWalletId: depositWallet.id,
-          userId: operator.userId
-        }
+      this.depositWalletsRepository.findLatestWalletOperation({
+        depositWalletId: depositWallet.id,
+        userId: operator.userId
       }),
-      this.db.relayerTransaction.findFirst({
-        orderBy: { updatedAt: "desc" },
-        select: {
-          failureReason: true,
-          id: true,
-          relayerTransactionId: true,
-          status: true,
-          updatedAt: true
-        },
-        where: {
-          depositWalletId: depositWallet.id,
-          userId: operator.userId
-        }
+      this.depositWalletsRepository.findLatestRelayerTransaction({
+        depositWalletId: depositWallet.id,
+        userId: operator.userId
       })
     ]);
 
@@ -324,14 +230,10 @@ export class DepositWalletService {
   }
 
   private async requireConnectedEoa(ownerAddress: string, chainId: number, operator: Operator) {
-    const wallet = await this.db.wallet.findFirst({
-      select: { address: true, chainId: true },
-      where: {
-        address: ownerAddress,
-        chainId,
-        type: "EOA",
-        userId: operator.userId
-      }
+    const wallet = await this.walletsRepository.findConnectedEoaWallet({
+      address: ownerAddress,
+      chainId,
+      userId: operator.userId
     });
 
     if (!wallet) {
@@ -344,70 +246,29 @@ export class DepositWalletService {
     relayerResult: DepositWalletRelayerResult,
     failureReason: string | null
   ) {
-    const existingDepositWallet = await this.findDepositWalletById(depositWalletId);
+    const existingDepositWallet = await this.depositWalletsRepository.findDepositWalletById(depositWalletId);
     if (this.isReadyDepositWallet(existingDepositWallet) && relayerResult.status !== "CONFIRMED") {
       return;
     }
 
-    await this.db.depositWallet.update({
-      data: {
-        address: relayerResult.depositWalletAddress ?? undefined,
-        failureReason,
-        raw: this.inputJsonObject(relayerResult.raw),
-        status: relayerResult.status === "CONFIRMED" ? "READY" : relayerResult.status
-      },
-      where: { id: depositWalletId }
+    await this.depositWalletsRepository.updateDepositWalletAfterRelayer({
+      depositWalletAddress: relayerResult.depositWalletAddress,
+      depositWalletId,
+      failureReason,
+      raw: relayerResult.raw,
+      status: relayerResult.status === "CONFIRMED" ? "READY" : relayerResult.status
     });
   }
 
   private async markDepositWalletFailed(depositWalletId: string, failureReason: string) {
-    const existingDepositWallet = await this.findDepositWalletById(depositWalletId);
+    const existingDepositWallet = await this.depositWalletsRepository.findDepositWalletById(depositWalletId);
     if (this.isReadyDepositWallet(existingDepositWallet)) {
       return;
     }
 
-    await this.db.depositWallet.update({
-      data: {
-        failureReason,
-        status: "FAILED"
-      },
-      where: { id: depositWalletId }
-    });
-  }
-
-  private findDepositWalletByOwner(
-    ownerAddress: string,
-    chainId: number,
-    operator: Operator
-  ): Promise<DepositWalletRecord | null> {
-    return this.db.depositWallet.findFirst({
-      select: {
-        address: true,
-        chainId: true,
-        id: true,
-        ownerAddress: true,
-        status: true,
-        updatedAt: true
-      },
-      where: {
-        chainId,
-        ownerAddress,
-        userId: operator.userId
-      }
-    });
-  }
-
-  private findDepositWalletById(depositWalletId: string): Promise<DepositWalletRecord | null> {
-    return this.db.depositWallet.findFirst({
-      select: {
-        address: true,
-        chainId: true,
-        id: true,
-        ownerAddress: true,
-        status: true,
-        updatedAt: true
-      },
-      where: { id: depositWalletId }
+    await this.depositWalletsRepository.markDepositWalletFailed({
+      depositWalletId,
+      failureReason
     });
   }
 
@@ -463,24 +324,8 @@ export class DepositWalletService {
     );
   }
 
-  private inputJson(value: object): Prisma.InputJsonObject {
-    return value as unknown as Prisma.InputJsonObject;
-  }
-
-  private inputJsonObject(value: unknown): Prisma.InputJsonObject {
-    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-      return value as Prisma.InputJsonObject;
-    }
-
-    return { value } as Prisma.InputJsonObject;
-  }
-
   private errorMessage(error: unknown) {
     return error instanceof Error ? error.message : String(error);
-  }
-
-  private get db(): DepositWalletPrisma {
-    return this.prisma as unknown as DepositWalletPrisma;
   }
 }
 

@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
-import { PrismaModule } from "../prisma/prisma.module";
+import { RepositoriesModule } from "../infrastructure/repositories/repositories.module";
 import { DepositWalletService } from "./deposit-wallet.service";
 import {
   ConfiguredDepositWalletRelayer,
@@ -17,7 +17,7 @@ import { WalletReadinessService } from "./wallet-readiness.service";
 import { WalletsController } from "./wallets.controller";
 
 @Module({
-  imports: [AuthModule, PrismaModule],
+  imports: [AuthModule, RepositoriesModule],
   controllers: [WalletProofController, WalletsController],
   providers: [
     ConfiguredDepositWalletRelayer,

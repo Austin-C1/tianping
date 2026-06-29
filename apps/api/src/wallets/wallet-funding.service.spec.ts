@@ -15,22 +15,25 @@ describe("WalletFundingService", () => {
     jest.useRealTimers();
   });
 
-  const createPrisma = () => ({
-    depositWallet: {
-      findFirst: jest.fn(),
-      update: jest.fn()
-    }
+  const createFundingRepository = () => ({
+    findLatestDepositWalletFunding: jest.fn(),
+    updateFundingSnapshot: jest.fn()
   });
 
   const createProvider = (): jest.Mocked<WalletFundingProvider> => ({
     getBalanceAllowance: jest.fn()
   });
 
+  const createService = (
+    fundingRepository: ReturnType<typeof createFundingRepository>,
+    provider: jest.Mocked<WalletFundingProvider>
+  ) => new (WalletFundingService as any)(fundingRepository, provider);
+
   it("returns NO_DEPOSIT_WALLET before a ready Deposit Wallet exists", async () => {
-    const prisma = createPrisma();
+    const fundingRepository = createFundingRepository();
     const provider = createProvider();
-    prisma.depositWallet.findFirst.mockResolvedValue(null);
-    const service = new WalletFundingService(prisma as never, provider);
+    fundingRepository.findLatestDepositWalletFunding.mockResolvedValue(null);
+    const service = createService(fundingRepository, provider);
 
     await expect(service.getFunding({ userId: "user_1" })).resolves.toEqual({
       allowance: null,
@@ -47,16 +50,16 @@ describe("WalletFundingService", () => {
   });
 
   it("marks cached funding stale when the balance allowance cache is expired", async () => {
-    const prisma = createPrisma();
+    const fundingRepository = createFundingRepository();
     const provider = createProvider();
-    prisma.depositWallet.findFirst.mockResolvedValue(
+    fundingRepository.findLatestDepositWalletFunding.mockResolvedValue(
       depositWallet({
         balanceAllowanceUpdatedAt: new Date("2026-06-25T09:50:00.000Z"),
         exchangeAllowance: "100",
         pUsdBalance: "100"
       })
     );
-    const service = new WalletFundingService(prisma as never, provider);
+    const service = createService(fundingRepository, provider);
 
     await expect(
       service.getFunding({ userId: "user_1" }, { requiredAmountUsd: 10, minimumOrderSize: 5 })
@@ -73,16 +76,16 @@ describe("WalletFundingService", () => {
   });
 
   it("blocks funding when fresh pUSD balance is insufficient", async () => {
-    const prisma = createPrisma();
+    const fundingRepository = createFundingRepository();
     const provider = createProvider();
-    prisma.depositWallet.findFirst.mockResolvedValue(
+    fundingRepository.findLatestDepositWalletFunding.mockResolvedValue(
       depositWallet({
         balanceAllowanceUpdatedAt: new Date("2026-06-25T09:59:00.000Z"),
         exchangeAllowance: "100",
         pUsdBalance: "0"
       })
     );
-    const service = new WalletFundingService(prisma as never, provider);
+    const service = createService(fundingRepository, provider);
 
     await expect(
       service.getFunding({ userId: "user_1" }, { requiredAmountUsd: 10 })
@@ -93,16 +96,16 @@ describe("WalletFundingService", () => {
   });
 
   it("blocks funding when fresh allowance is lower than the required amount", async () => {
-    const prisma = createPrisma();
+    const fundingRepository = createFundingRepository();
     const provider = createProvider();
-    prisma.depositWallet.findFirst.mockResolvedValue(
+    fundingRepository.findLatestDepositWalletFunding.mockResolvedValue(
       depositWallet({
         balanceAllowanceUpdatedAt: new Date("2026-06-25T09:59:00.000Z"),
         exchangeAllowance: "2",
         pUsdBalance: "100"
       })
     );
-    const service = new WalletFundingService(prisma as never, provider);
+    const service = createService(fundingRepository, provider);
 
     await expect(
       service.getFunding({ userId: "user_1" }, { requiredAmountUsd: 10 })
@@ -113,9 +116,9 @@ describe("WalletFundingService", () => {
   });
 
   it("refreshes balance allowance through the configured provider and returns READY funding", async () => {
-    const prisma = createPrisma();
+    const fundingRepository = createFundingRepository();
     const provider = createProvider();
-    prisma.depositWallet.findFirst
+    fundingRepository.findLatestDepositWalletFunding
       .mockResolvedValueOnce(
         depositWallet({
           balanceAllowanceUpdatedAt: null,
@@ -135,8 +138,8 @@ describe("WalletFundingService", () => {
       pUsdBalance: "50",
       raw: { balance: "50", allowances: { exchange: "100" } }
     });
-    prisma.depositWallet.update.mockResolvedValue({});
-    const service = new WalletFundingService(prisma as never, provider);
+    fundingRepository.updateFundingSnapshot.mockResolvedValue({});
+    const service = createService(fundingRepository, provider);
 
     await expect(
       service.refreshFunding({ userId: "user_1" }, { requiredAmountUsd: 10 })
@@ -151,25 +154,23 @@ describe("WalletFundingService", () => {
       chainId: 137,
       depositWalletAddress: "0x2222222222222222222222222222222222222222"
     });
-    expect(prisma.depositWallet.update).toHaveBeenCalledWith({
-      data: {
-        balanceAllowanceRaw: {
-          balance: "50",
-          allowances: { exchange: "100" }
-        },
-        balanceAllowanceUpdatedAt: now,
-        exchangeAllowance: "100",
-        pUsdBalance: "50"
+    expect(fundingRepository.updateFundingSnapshot).toHaveBeenCalledWith({
+      balanceAllowanceRaw: {
+        balance: "50",
+        allowances: { exchange: "100" }
       },
-      where: { id: "deposit_wallet_1" }
+      balanceAllowanceUpdatedAt: now,
+      depositWalletId: "deposit_wallet_1",
+      exchangeAllowance: "100",
+      pUsdBalance: "50"
     });
   });
 
   it("rejects refresh when the user has no ready Deposit Wallet", async () => {
-    const prisma = createPrisma();
+    const fundingRepository = createFundingRepository();
     const provider = createProvider();
-    prisma.depositWallet.findFirst.mockResolvedValue(null);
-    const service = new WalletFundingService(prisma as never, provider);
+    fundingRepository.findLatestDepositWalletFunding.mockResolvedValue(null);
+    const service = createService(fundingRepository, provider);
 
     await expect(service.refreshFunding({ userId: "user_1" })).rejects.toBeInstanceOf(
       BadRequestException

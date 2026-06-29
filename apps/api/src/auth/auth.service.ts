@@ -1,4 +1,6 @@
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { AUDIT_LOGS_REPOSITORY } from "../infrastructure/repositories/repository.tokens";
+import type { AuditLogsRepository } from "../infrastructure/repositories/repository.types";
 import { PrismaService } from "../prisma/prisma.service";
 import type { LoginDto } from "./dto/login.dto";
 import type { RegisterDto } from "./dto/register.dto";
@@ -10,6 +12,8 @@ import type { AuthResult, AuthUser } from "./auth.types";
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(AUDIT_LOGS_REPOSITORY)
+    private readonly auditLogsRepository: AuditLogsRepository,
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService
   ) {}
@@ -96,14 +100,12 @@ export class AuthService {
     action: "auth.register" | "auth.login",
     email: string
   ): Promise<void> {
-    await this.prisma.auditLog.create({
-      data: {
-        userId,
-        action,
-        metadata: {
-          email
-        }
-      }
+    await this.auditLogsRepository.create({
+      action,
+      metadata: {
+        email
+      },
+      userId
     });
   }
 }

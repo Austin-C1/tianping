@@ -1,7 +1,12 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { FUNDING_REPOSITORY } from "../infrastructure/repositories/repository.tokens";
+import type {
+  DecimalLike,
+  DepositWalletFundingRecord,
+  FundingRepository
+} from "../infrastructure/repositories/repository.types";
 import { DEFAULT_POLYMARKET_CLOB_HOST } from "../order-router/order-router.config";
-import { PrismaService } from "../prisma/prisma.service";
 import { createLiveClobAdapter } from "../polymarket/clob-adapter";
 import type { ClobApiCredentials } from "../polymarket/clob-types";
 
@@ -44,18 +49,6 @@ export interface WalletFundingProvider {
   }>;
 }
 
-interface DepositWalletFundingRecord {
-  address: string | null;
-  balanceAllowanceUpdatedAt: Date | null;
-  chainId: number;
-  exchangeAllowance: DecimalLike | null;
-  id: string;
-  pUsdBalance: DecimalLike | null;
-  status: string;
-}
-
-type DecimalLike = string | number | { toString(): string };
-
 const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export const WALLET_FUNDING_PROVIDER = Symbol("WALLET_FUNDING_PROVIDER");
@@ -63,7 +56,8 @@ export const WALLET_FUNDING_PROVIDER = Symbol("WALLET_FUNDING_PROVIDER");
 @Injectable()
 export class WalletFundingService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(FUNDING_REPOSITORY)
+    private readonly fundingRepository: FundingRepository,
     @Inject(WALLET_FUNDING_PROVIDER)
     private readonly provider: WalletFundingProvider
   ) {}
@@ -171,33 +165,19 @@ export class WalletFundingService {
     });
     const now = new Date();
 
-    await this.db.depositWallet.update({
-      data: {
-        balanceAllowanceRaw: balanceAllowance.raw,
-        balanceAllowanceUpdatedAt: now,
-        exchangeAllowance: balanceAllowance.allowance,
-        pUsdBalance: balanceAllowance.pUsdBalance
-      },
-      where: { id: depositWallet.id }
+    await this.fundingRepository.updateFundingSnapshot({
+      balanceAllowanceRaw: balanceAllowance.raw,
+      balanceAllowanceUpdatedAt: now,
+      depositWalletId: depositWallet.id,
+      exchangeAllowance: balanceAllowance.allowance,
+      pUsdBalance: balanceAllowance.pUsdBalance
     });
 
     return this.getFunding(operator, options);
   }
 
   private findLatestDepositWallet(userId: string): Promise<DepositWalletFundingRecord | null> {
-    return this.db.depositWallet.findFirst({
-      orderBy: { updatedAt: "desc" },
-      select: {
-        address: true,
-        balanceAllowanceUpdatedAt: true,
-        chainId: true,
-        exchangeAllowance: true,
-        id: true,
-        pUsdBalance: true,
-        status: true
-      },
-      where: { userId }
-    });
+    return this.fundingRepository.findLatestDepositWalletFunding(userId);
   }
 
   private context(options?: WalletFundingOptions) {
@@ -248,19 +228,6 @@ export class WalletFundingService {
     return Date.now() - updatedAt.getTime() > DEFAULT_CACHE_TTL_MS;
   }
 
-  private get db(): PrismaService & {
-    depositWallet: {
-      findFirst(args: object): Promise<DepositWalletFundingRecord | null>;
-      update(args: object): Promise<unknown>;
-    };
-  } {
-    return this.prisma as PrismaService & {
-      depositWallet: {
-        findFirst(args: object): Promise<DepositWalletFundingRecord | null>;
-        update(args: object): Promise<unknown>;
-      };
-    };
-  }
 }
 
 @Injectable()

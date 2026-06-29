@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Prisma } from "@prisma/client";
-import { PrismaService } from "../prisma/prisma.service";
+import { ORDERS_REPOSITORY } from "../infrastructure/repositories/repository.tokens";
+import type { OrdersRepository } from "../infrastructure/repositories/repository.types";
 import { WalletReadinessService } from "../wallets/wallet-readiness.service";
 import type { PreviewOrderDto } from "./dto/preview-order.dto";
 import { toClobOrderDraft } from "./order-domain";
@@ -15,7 +16,8 @@ const REAL_CLOB_DISABLED_REASON = "Real CLOB submission is disabled by the manua
 @Injectable()
 export class OrdersService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(ORDERS_REPOSITORY)
+    private readonly ordersRepository: OrdersRepository,
     private readonly config: ConfigService,
     private readonly walletReadinessService: WalletReadinessService
   ) {}
@@ -26,12 +28,7 @@ export class OrdersService {
       throw new BadRequestException("Order amount must be greater than zero");
     }
 
-    const market = await this.prisma.marketSnapshot.findFirst({
-      include: { quotes: { orderBy: { outcomeIndex: "asc" } } },
-      where: {
-        OR: [{ id: dto.marketId }, { marketId: dto.marketId }, { slug: dto.marketId }]
-      }
-    });
+    const market = await this.ordersRepository.findPreviewMarket(dto.marketId);
 
     if (!market) {
       throw new NotFoundException("Market not found");
@@ -83,26 +80,23 @@ export class OrdersService {
       requiredAmountUsd: amountUsd
     });
 
-    const created = await this.prisma.order.create({
-      data: {
-        builderCode,
-        clobStatus: "PREVIEWED",
-        failureReason: null,
-        funderAddress,
-        marketSnapshotId: market.id,
-        orderType,
-        outcome,
-        price: price.toString(),
-        rawPreview: this.inputJson(clobDraft),
-        rawSignedOrder: undefined,
-        side: "BUY",
-        signatureType: clobDraft.signatureType,
-        size: shares.toString(),
-        status: "PREVIEWED",
-        tokenId: tokenID,
-        userId: operator.userId
-      },
-      select: { id: true }
+    const created = await this.ordersRepository.createPreviewOrder({
+      builderCode,
+      clobStatus: "PREVIEWED",
+      failureReason: null,
+      funderAddress,
+      marketSnapshotId: market.id,
+      orderType,
+      outcome,
+      price: price.toString(),
+      rawPreview: this.inputJson(clobDraft),
+      rawSignedOrder: undefined,
+      side: "BUY",
+      signatureType: clobDraft.signatureType,
+      size: shares.toString(),
+      status: "PREVIEWED",
+      tokenId: tokenID,
+      userId: operator.userId
     });
 
     return {

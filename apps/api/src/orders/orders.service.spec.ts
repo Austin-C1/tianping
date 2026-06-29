@@ -5,13 +5,9 @@ import { OrdersService } from "./orders.service";
 describe("OrdersService", () => {
   const validBuilderCode = `0x${"1".repeat(64)}`;
 
-  const createPrisma = () => ({
-    marketSnapshot: {
-      findFirst: jest.fn()
-    },
-    order: {
-      create: jest.fn()
-    }
+  const createOrdersRepository = () => ({
+    createPreviewOrder: jest.fn(),
+    findPreviewMarket: jest.fn()
   });
 
   const createConfig = (values: Record<string, string | undefined> = {}) =>
@@ -69,8 +65,8 @@ describe("OrdersService", () => {
   });
 
   it("creates a CLOB V2 preview draft with builder attribution and disabled submission", async () => {
-    const prisma = createPrisma();
-    prisma.marketSnapshot.findFirst.mockResolvedValue({
+    const ordersRepository = createOrdersRepository();
+    ordersRepository.findPreviewMarket.mockResolvedValue({
       id: "snapshot_1",
       marketId: "market_1",
       conditionId: "condition_1",
@@ -92,9 +88,9 @@ describe("OrdersService", () => {
         }
       ]
     });
-    prisma.order.create.mockResolvedValue({ id: "order_1" });
+    ordersRepository.createPreviewOrder.mockResolvedValue({ id: "order_1" });
     const service = new OrdersService(
-      prisma as never,
+      ordersRepository as never,
       createConfig({ POLYMARKET_BUILDER_CODE: validBuilderCode }),
       createWalletReadinessService() as never
     );
@@ -138,42 +134,34 @@ describe("OrdersService", () => {
       submitDisabled: true,
       submitDisabledReason: "Real CLOB submission is disabled by the manual Gate"
     });
-    expect(prisma.marketSnapshot.findFirst).toHaveBeenCalledWith({
-      include: { quotes: { orderBy: { outcomeIndex: "asc" } } },
-      where: {
-        OR: [{ id: "market_1" }, { marketId: "market_1" }, { slug: "market_1" }]
-      }
-    });
-    expect(prisma.order.create).toHaveBeenCalledWith({
-      data: {
-        marketSnapshotId: "snapshot_1",
+    expect(ordersRepository.findPreviewMarket).toHaveBeenCalledWith("market_1");
+    expect(ordersRepository.createPreviewOrder).toHaveBeenCalledWith({
+      marketSnapshotId: "snapshot_1",
+      builderCode: validBuilderCode,
+      clobStatus: "PREVIEWED",
+      failureReason: null,
+      funderAddress: null,
+      orderType: "FAK",
+      outcome: "Yes",
+      price: "0.53",
+      rawPreview: expect.objectContaining({
+        amount: 10,
         builderCode: validBuilderCode,
-        clobStatus: "PREVIEWED",
-        failureReason: null,
-        funderAddress: null,
-        orderType: "FAK",
-        outcome: "Yes",
-        price: "0.53",
-        rawPreview: expect.objectContaining({
-          amount: 10,
-          builderCode: validBuilderCode,
-          tokenID: "token_yes"
-        }),
-        rawSignedOrder: undefined,
-        side: "BUY",
-        signatureType: "POLY_1271",
-        size: "18.87",
-        status: "PREVIEWED",
-        tokenId: "token_yes",
-        userId: "user_1"
-      },
-      select: { id: true }
+        tokenID: "token_yes"
+      }),
+      rawSignedOrder: undefined,
+      side: "BUY",
+      signatureType: "POLY_1271",
+      size: "18.87",
+      status: "PREVIEWED",
+      tokenId: "token_yes",
+      userId: "user_1"
     });
   });
 
   it("marks builder attribution missing without blocking the preview", async () => {
-    const prisma = createPrisma();
-    prisma.marketSnapshot.findFirst.mockResolvedValue({
+    const ordersRepository = createOrdersRepository();
+    ordersRepository.findPreviewMarket.mockResolvedValue({
       id: "snapshot_1",
       marketId: "market_1",
       conditionId: null,
@@ -194,9 +182,9 @@ describe("OrdersService", () => {
         }
       ]
     });
-    prisma.order.create.mockResolvedValue({ id: "order_1" });
+    ordersRepository.createPreviewOrder.mockResolvedValue({ id: "order_1" });
     const service = new OrdersService(
-      prisma as never,
+      ordersRepository as never,
       createConfig(),
       createWalletReadinessService() as never
     );
@@ -218,8 +206,8 @@ describe("OrdersService", () => {
   });
 
   it("rejects previews below CLOB minimum order size", async () => {
-    const prisma = createPrisma();
-    prisma.marketSnapshot.findFirst.mockResolvedValue({
+    const ordersRepository = createOrdersRepository();
+    ordersRepository.findPreviewMarket.mockResolvedValue({
       id: "snapshot_1",
       marketId: "market_1",
       conditionId: null,
@@ -241,7 +229,7 @@ describe("OrdersService", () => {
       ]
     });
     const service = new OrdersService(
-      prisma as never,
+      ordersRepository as never,
       createConfig(),
       createWalletReadinessService() as never
     );
@@ -252,12 +240,12 @@ describe("OrdersService", () => {
         { userId: "user_1" }
       )
     ).rejects.toThrow("Order amount is below the CLOB minimum order size");
-    expect(prisma.order.create).not.toHaveBeenCalled();
+    expect(ordersRepository.createPreviewOrder).not.toHaveBeenCalled();
   });
 
   it("rejects previews when the CLOB tick size is unsupported", async () => {
-    const prisma = createPrisma();
-    prisma.marketSnapshot.findFirst.mockResolvedValue({
+    const ordersRepository = createOrdersRepository();
+    ordersRepository.findPreviewMarket.mockResolvedValue({
       id: "snapshot_1",
       marketId: "market_1",
       conditionId: null,
@@ -279,7 +267,7 @@ describe("OrdersService", () => {
       ]
     });
     const service = new OrdersService(
-      prisma as never,
+      ordersRepository as never,
       createConfig(),
       createWalletReadinessService() as never
     );
@@ -290,18 +278,18 @@ describe("OrdersService", () => {
         { userId: "user_1" }
       )
     ).rejects.toThrow("Unsupported CLOB tick size");
-    expect(prisma.order.create).not.toHaveBeenCalled();
+    expect(ordersRepository.createPreviewOrder).not.toHaveBeenCalled();
   });
 
   it("rejects previews when the market is closed or the outcome quote is missing", async () => {
-    const prisma = createPrisma();
+    const ordersRepository = createOrdersRepository();
     const service = new OrdersService(
-      prisma as never,
+      ordersRepository as never,
       createConfig({ POLYMARKET_BUILDER_CODE: validBuilderCode }),
       createWalletReadinessService() as never
     );
 
-    prisma.marketSnapshot.findFirst.mockResolvedValueOnce(null);
+    ordersRepository.findPreviewMarket.mockResolvedValueOnce(null);
     await expect(
       service.previewOrder(
         { amountUsd: 10, marketId: "missing", outcomeIndex: 0 },
@@ -309,7 +297,7 @@ describe("OrdersService", () => {
       )
     ).rejects.toBeInstanceOf(NotFoundException);
 
-    prisma.marketSnapshot.findFirst.mockResolvedValueOnce({
+    ordersRepository.findPreviewMarket.mockResolvedValueOnce({
       id: "snapshot_1",
       marketId: "market_1",
       question: "Closed market",
@@ -325,7 +313,7 @@ describe("OrdersService", () => {
       )
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    prisma.marketSnapshot.findFirst.mockResolvedValueOnce({
+    ordersRepository.findPreviewMarket.mockResolvedValueOnce({
       id: "snapshot_2",
       marketId: "market_2",
       question: "Open market",
@@ -343,8 +331,8 @@ describe("OrdersService", () => {
   });
 
   it("returns deposit wallet readiness gates without blocking the preview", async () => {
-    const prisma = createPrisma();
-    prisma.marketSnapshot.findFirst.mockResolvedValue({
+    const ordersRepository = createOrdersRepository();
+    ordersRepository.findPreviewMarket.mockResolvedValue({
       id: "snapshot_1",
       marketId: "market_1",
       conditionId: "condition_1",
@@ -366,7 +354,7 @@ describe("OrdersService", () => {
         }
       ]
     });
-    prisma.order.create.mockResolvedValue({ id: "order_1" });
+    ordersRepository.createPreviewOrder.mockResolvedValue({ id: "order_1" });
     const readiness = {
       ...previewOnlyReadiness,
       eoa: {
@@ -390,7 +378,7 @@ describe("OrdersService", () => {
       ]
     };
     const walletReadinessService = createWalletReadinessService(readiness);
-    const service = new OrdersService(prisma as never, createConfig(), walletReadinessService as never);
+    const service = new OrdersService(ordersRepository as never, createConfig(), walletReadinessService as never);
 
     await expect(
       service.previewOrder(
@@ -421,8 +409,8 @@ describe("OrdersService", () => {
   });
 
   it("includes balance allowance gate details in order previews", async () => {
-    const prisma = createPrisma();
-    prisma.marketSnapshot.findFirst.mockResolvedValue({
+    const ordersRepository = createOrdersRepository();
+    ordersRepository.findPreviewMarket.mockResolvedValue({
       id: "snapshot_1",
       marketId: "market_1",
       conditionId: "condition_1",
@@ -444,7 +432,7 @@ describe("OrdersService", () => {
         }
       ]
     });
-    prisma.order.create.mockResolvedValue({ id: "order_1" });
+    ordersRepository.createPreviewOrder.mockResolvedValue({ id: "order_1" });
     const readiness = {
       ...previewOnlyReadiness,
       depositWallet: {
@@ -479,7 +467,7 @@ describe("OrdersService", () => {
       ]
     };
     const walletReadinessService = createWalletReadinessService(readiness);
-    const service = new OrdersService(prisma as never, createConfig(), walletReadinessService as never);
+    const service = new OrdersService(ordersRepository as never, createConfig(), walletReadinessService as never);
 
     await expect(
       service.previewOrder(

@@ -1,0 +1,53 @@
+import { Module } from "@nestjs/common";
+import { PrismaModule } from "../../prisma/prisma.module";
+import { PrismaAuditLogsRepository } from "./prisma-audit-logs.repository";
+import { PrismaDepositWalletsRepository } from "./prisma-deposit-wallets.repository";
+import { PrismaFundingRepository } from "./prisma-funding.repository";
+import { PrismaOrdersRepository } from "./prisma-orders.repository";
+import { PrismaWalletsRepository } from "./prisma-wallets.repository";
+import {
+  AUDIT_LOGS_REPOSITORY,
+  DEPOSIT_WALLETS_REPOSITORY,
+  FUNDING_REPOSITORY,
+  ORDERS_REPOSITORY,
+  WALLETS_REPOSITORY
+} from "./repository.tokens";
+
+@Module({
+  imports: [PrismaModule],
+  providers: [
+    PrismaAuditLogsRepository,
+    PrismaDepositWalletsRepository,
+    PrismaFundingRepository,
+    PrismaOrdersRepository,
+    PrismaWalletsRepository,
+    {
+      provide: AUDIT_LOGS_REPOSITORY,
+      useExisting: PrismaAuditLogsRepository
+    },
+    {
+      provide: DEPOSIT_WALLETS_REPOSITORY,
+      useExisting: PrismaDepositWalletsRepository
+    },
+    {
+      provide: FUNDING_REPOSITORY,
+      useExisting: PrismaFundingRepository
+    },
+    {
+      provide: ORDERS_REPOSITORY,
+      useExisting: PrismaOrdersRepository
+    },
+    {
+      provide: WALLETS_REPOSITORY,
+      useExisting: PrismaWalletsRepository
+    }
+  ],
+  exports: [
+    AUDIT_LOGS_REPOSITORY,
+    DEPOSIT_WALLETS_REPOSITORY,
+    FUNDING_REPOSITORY,
+    ORDERS_REPOSITORY,
+    WALLETS_REPOSITORY
+  ]
+})
+export class RepositoriesModule {}

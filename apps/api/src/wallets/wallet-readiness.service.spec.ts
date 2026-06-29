@@ -2,13 +2,11 @@ import { WalletReadinessService } from "./wallet-readiness.service";
 import type { WalletFundingState } from "./wallet-funding.service";
 
 describe("WalletReadinessService", () => {
-  const createPrisma = () => ({
-    depositWallet: {
-      findFirst: jest.fn()
-    },
-    wallet: {
-      findFirst: jest.fn()
-    }
+  const createWalletsRepository = () => ({
+    findLatestWallet: jest.fn()
+  });
+  const createDepositWalletsRepository = () => ({
+    findLatestDepositWallet: jest.fn()
   });
   const createFundingService = (funding: WalletFundingState = {
     allowance: null,
@@ -23,13 +21,19 @@ describe("WalletReadinessService", () => {
   }) => ({
     getFunding: jest.fn().mockResolvedValue(funding)
   });
+  const createService = (
+    walletsRepository: ReturnType<typeof createWalletsRepository>,
+    depositWalletsRepository: ReturnType<typeof createDepositWalletsRepository>,
+    fundingService: ReturnType<typeof createFundingService>
+  ) => new (WalletReadinessService as any)(walletsRepository, depositWalletsRepository, fundingService);
 
   it("returns preview-only readiness when no wallets are connected", async () => {
-    const prisma = createPrisma();
+    const walletsRepository = createWalletsRepository();
+    const depositWalletsRepository = createDepositWalletsRepository();
     const fundingService = createFundingService();
-    prisma.depositWallet.findFirst.mockResolvedValue(null);
-    prisma.wallet.findFirst.mockResolvedValue(null);
-    const service = new WalletReadinessService(prisma as never, fundingService as never);
+    depositWalletsRepository.findLatestDepositWallet.mockResolvedValue(null);
+    walletsRepository.findLatestWallet.mockResolvedValue(null);
+    const service = createService(walletsRepository, depositWalletsRepository, fundingService);
 
     await expect(service.getReadiness({ userId: "user_1" })).resolves.toEqual({
       canPreview: true,
@@ -81,35 +85,30 @@ describe("WalletReadinessService", () => {
         status: "NOT_CHECKED"
       }
     });
-    expect(prisma.wallet.findFirst).toHaveBeenNthCalledWith(1, {
-      orderBy: { updatedAt: "desc" },
-      select: { address: true, chainId: true },
-      where: { type: "EOA", userId: "user_1" }
+    expect(walletsRepository.findLatestWallet).toHaveBeenNthCalledWith(1, {
+      type: "EOA",
+      userId: "user_1"
     });
-    expect(prisma.wallet.findFirst).toHaveBeenNthCalledWith(2, {
-      orderBy: { updatedAt: "desc" },
-      select: { address: true, chainId: true },
-      where: { type: "DEPOSIT", userId: "user_1" }
+    expect(walletsRepository.findLatestWallet).toHaveBeenNthCalledWith(2, {
+      type: "DEPOSIT",
+      userId: "user_1"
     });
-    expect(prisma.depositWallet.findFirst).toHaveBeenCalledWith({
-      orderBy: { updatedAt: "desc" },
-      select: { address: true, chainId: true, status: true },
-      where: { userId: "user_1" }
-    });
+    expect(depositWalletsRepository.findLatestDepositWallet).toHaveBeenCalledWith("user_1");
     expect(fundingService.getFunding).toHaveBeenCalledWith({ userId: "user_1" }, undefined);
   });
 
   it("marks wallet binding ready when an EOA wallet exists", async () => {
-    const prisma = createPrisma();
+    const walletsRepository = createWalletsRepository();
+    const depositWalletsRepository = createDepositWalletsRepository();
     const fundingService = createFundingService();
-    prisma.depositWallet.findFirst.mockResolvedValue(null);
-    prisma.wallet.findFirst
+    depositWalletsRepository.findLatestDepositWallet.mockResolvedValue(null);
+    walletsRepository.findLatestWallet
       .mockResolvedValueOnce({
         address: "0x0000000000000000000000000000000000000001",
         chainId: 137
       })
       .mockResolvedValueOnce(null);
-    const service = new WalletReadinessService(prisma as never, fundingService as never);
+    const service = createService(walletsRepository, depositWalletsRepository, fundingService);
 
     await expect(service.getReadiness({ userId: "user_1" })).resolves.toMatchObject({
       canPreview: true,
@@ -140,7 +139,8 @@ describe("WalletReadinessService", () => {
   });
 
   it("marks Deposit Wallet ready only when the production DepositWallet row is READY", async () => {
-    const prisma = createPrisma();
+    const walletsRepository = createWalletsRepository();
+    const depositWalletsRepository = createDepositWalletsRepository();
     const fundingService = createFundingService({
       allowance: "100",
       balanceCacheStale: false,
@@ -152,16 +152,16 @@ describe("WalletReadinessService", () => {
       requiredAllowance: "10",
       status: "READY" as const
     });
-    prisma.wallet.findFirst.mockResolvedValueOnce({
+    walletsRepository.findLatestWallet.mockResolvedValueOnce({
       address: "0x0000000000000000000000000000000000000001",
       chainId: 137
     });
-    prisma.depositWallet.findFirst.mockResolvedValue({
+    depositWalletsRepository.findLatestDepositWallet.mockResolvedValue({
       address: "0x2222222222222222222222222222222222222222",
       chainId: 137,
       status: "READY"
     });
-    const service = new WalletReadinessService(prisma as never, fundingService as never);
+    const service = createService(walletsRepository, depositWalletsRepository, fundingService);
 
     await expect(
       service.getReadiness(
@@ -196,7 +196,7 @@ describe("WalletReadinessService", () => {
         expect.any(Object)
       ]
     });
-    expect(prisma.wallet.findFirst).toHaveBeenCalledTimes(1);
+    expect(walletsRepository.findLatestWallet).toHaveBeenCalledTimes(1);
     expect(fundingService.getFunding).toHaveBeenCalledWith(
       { userId: "user_1" },
       { minimumOrderSize: 5, requiredAmountUsd: 10 }
