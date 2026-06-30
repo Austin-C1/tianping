@@ -129,3 +129,9 @@ npm run build
 npm run lint
 npm run test:e2e
 ```
+
+## Dependency Audit Notes
+
+On 2026-06-30, `npm audit fix` safely updated lockfile-only dependency versions for `@nestjs/swagger`, nested `js-yaml`, `swagger-ui-dist`, and `viem`.
+
+`npm audit` still reports upstream dependency-chain risks after the safe fix. The main remaining sources are Polymarket SDK chains (`axios`, `ethers@5`, `viem`, `ws`), Nest `multer`, Next `postcss`, and Vite `esbuild`. Do not run `npm audit fix --force` without a dedicated dependency-upgrade module because npm proposes breaking downgrades such as Nest `7.5.5` and Next `9.3.3`, and Polymarket SDK replacement needs contract review.

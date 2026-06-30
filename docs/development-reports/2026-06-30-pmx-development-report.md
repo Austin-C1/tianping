@@ -71,6 +71,29 @@ npm run build --workspace @pmx/admin
 npm run test:e2e -- tests/e2e/admin.spec.ts
 ```
 
+## Dependency Audit Follow-up
+
+`npm audit fix` was run on 2026-06-30 after the PR conflict cleanup. It safely updated the lockfile for:
+
+| Package | Change |
+|---|---|
+| `@nestjs/swagger` | `11.4.4` -> `11.4.5` |
+| `@nestjs/swagger` nested `js-yaml` | `4.1.1` -> `4.3.0` |
+| `@istanbuljs/load-nyc-config` nested `js-yaml` | `3.14.2` -> `3.15.0` |
+| `swagger-ui-dist` | `5.32.6` -> `5.32.8` |
+| `viem` | `2.53.1` -> `2.54.0` |
+
+Remaining `npm audit` items are still reported by upstream dependency chains:
+
+| Source | Reason not force-fixed |
+|---|---|
+| `@polymarket/builder-relayer-client` / `@polymarket/clob-client-v2` | Pull in old `axios`, `ethers@5`, `viem`, and `ws` chains. Replacing or downgrading these SDKs would affect CLOB integration contracts. |
+| `@nestjs/platform-express` | Uses `multer@2.1.1`; npm's force suggestion downgrades Nest core to `7.5.5`, which is a breaking framework rollback. |
+| `next` | Uses `postcss@8.4.31`; npm's force suggestion downgrades Next to `9.3.3`, which is not compatible with the current app. |
+| `vite` | Uses `esbuild@0.27.7`; npm reports a normal fix path, but workspace `npm audit fix` did not produce a compatible dependency-tree update. |
+
+`npm audit fix --force` was intentionally not used because the proposed fixes are framework downgrades or Polymarket SDK contract changes. Real CLOB submit remains disabled, so the Polymarket SDK risk is not currently exposed through live order submission.
+
 ## Main Files
 
 | Path | Purpose |
