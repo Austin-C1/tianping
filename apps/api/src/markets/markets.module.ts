@@ -8,6 +8,7 @@ import { MarketsService } from "./markets.service";
 @Module({
   imports: [AuthModule, MarketProviderModule, PrismaModule],
   controllers: [MarketsController],
-  providers: [MarketsService]
+  providers: [MarketsService],
+  exports: [MarketsService]
 })
 export class MarketsModule {}

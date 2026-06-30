@@ -237,6 +237,7 @@ function gateTitle(key: string, fallback: string) {
     'market-data-sync': '市场数据同步',
     'market-quote-sync': '市场行情同步',
     'order-router-safe-mode': 'Order Router 安全模式',
+    'queue-sync-readiness': '队列同步准备状态',
     'risk-event-review': '风险事件 review',
     'wallet-binding-proof': '钱包绑定证明'
   }

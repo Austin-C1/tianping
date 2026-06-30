@@ -35,6 +35,9 @@ describe("OpenAPI document", () => {
         "/admin/gates",
         "/admin/environment",
         "/admin/users",
+        "/admin/sync/market",
+        "/admin/sync/jobs",
+        "/admin/sync/jobs/{id}",
         "/admin/markets/sync"
       ])
     );
@@ -58,5 +61,6 @@ describe("OpenAPI document", () => {
     expect(document.components?.schemas?.AuthResultDto).toBeDefined();
     expect(document.components?.schemas?.WalletReadinessDto).toBeDefined();
     expect(document.components?.schemas?.PreviewOrderResponseDto).toBeDefined();
+    expect(document.components?.schemas?.SyncJobRunDto).toBeDefined();
   });
 });

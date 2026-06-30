@@ -7,13 +7,13 @@ import type {
   ManagedAuditLog,
   ManagedOrder,
   ManagedUser,
-  MarketSyncResult,
   OrderRouterEnvironment,
   OrderRouterMode,
   RiskGate,
   RiskGateCategory,
   RiskGateReport,
-  RiskGateSeverity
+  RiskGateSeverity,
+  SyncJobRun
 } from '@pmx/api-client'
 import { createAdminApiClient, runAdminApiRequest } from './http'
 
@@ -26,13 +26,13 @@ export type {
   ManagedAuditLog,
   ManagedOrder,
   ManagedUser,
-  MarketSyncResult,
   OrderRouterEnvironment,
   OrderRouterMode,
   RiskGate,
   RiskGateCategory,
   RiskGateReport,
-  RiskGateSeverity
+  RiskGateSeverity,
+  SyncJobRun
 } from '@pmx/api-client'
 
 export function fetchAdminUsers(): Promise<ManagedUser[]> {
@@ -75,6 +75,6 @@ export function fetchAdminEnvironment(): Promise<OrderRouterEnvironment> {
   return runAdminApiRequest(() => createAdminApiClient().admin.getEnvironment())
 }
 
-export function syncMarkets(): Promise<MarketSyncResult> {
-  return runAdminApiRequest(() => createAdminApiClient().markets.sync())
+export function enqueueMarketSync(): Promise<SyncJobRun> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.enqueueMarketSync())
 }

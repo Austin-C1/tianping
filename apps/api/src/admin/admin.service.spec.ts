@@ -46,6 +46,9 @@ describe("AdminService", () => {
     },
     relayerTransaction: {
       findFirst: jest.fn()
+    },
+    syncJobRun: {
+      findFirst: jest.fn()
     }
   });
   const previewEnvironment: OrderRouterEnvironment = {
@@ -420,6 +423,7 @@ describe("AdminService", () => {
     prisma.relayerTransaction.findFirst.mockResolvedValue(null);
     prisma.auditLog.findFirst.mockResolvedValue({ createdAt: auditCreatedAt });
     prisma.liveTradingApproval.findFirst.mockResolvedValue(null);
+    prisma.syncJobRun.findFirst.mockResolvedValue(null);
     const service = new AdminService(
       prisma as never,
       createOrderRouterConfig({
@@ -435,7 +439,7 @@ describe("AdminService", () => {
     );
 
     await expect(service.getRiskGateReport({ role: "ADMIN" })).resolves.toEqual({
-      blockingCount: 2,
+      blockingCount: 3,
       canSubmitLiveOrders: false,
       generatedAt: expect.any(Date),
       liveTradingEnabled: true,
@@ -482,12 +486,33 @@ describe("AdminService", () => {
           status: "READY",
           title: "Funding readiness",
           updatedAt: new Date("2026-06-30T09:04:00.000Z")
+        }),
+        expect.objectContaining({
+          blocking: true,
+          evidence:
+            "No market sync queue job has completed yet. This records readiness only and does not enable real CLOB submit.",
+          key: "queue-sync-readiness",
+          severity: "WARNING",
+          status: "PENDING",
+          title: "Queue sync readiness",
+          updatedAt: null
         })
       ])
     });
     expect(prisma.auditLog.findFirst).toHaveBeenCalledWith({
       orderBy: { createdAt: "desc" },
       select: { createdAt: true }
+    });
+    expect(prisma.syncJobRun.findFirst).toHaveBeenCalledWith({
+      orderBy: { createdAt: "desc" },
+      select: {
+        completedAt: true,
+        createdAt: true,
+        failureReason: true,
+        status: true,
+        updatedAt: true
+      },
+      where: { type: "MARKET_SYNC" }
     });
   });
 
@@ -511,6 +536,13 @@ describe("AdminService", () => {
     });
     prisma.relayerTransaction.findFirst.mockResolvedValue(null);
     prisma.auditLog.findFirst.mockResolvedValue({ createdAt: approvedAt });
+    prisma.syncJobRun.findFirst.mockResolvedValue({
+      completedAt: approvedAt,
+      createdAt: approvedAt,
+      failureReason: null,
+      status: "SUCCEEDED",
+      updatedAt: approvedAt
+    });
     prisma.liveTradingApproval.findFirst.mockResolvedValue({
       approvalReason: "funding and audit reviewed",
       approvedAt,
@@ -549,6 +581,16 @@ describe("AdminService", () => {
           status: "READY",
           title: "Manual live approval",
           updatedAt: approvedAt
+        }),
+        expect.objectContaining({
+          blocking: true,
+          evidence:
+            "Latest market sync queue job succeeded. This records readiness only and does not enable real CLOB submit.",
+          key: "queue-sync-readiness",
+          severity: "INFO",
+          status: "READY",
+          title: "Queue sync readiness",
+          updatedAt: approvedAt
         })
       ]),
       liveTradingEnabled: false,
@@ -576,6 +618,13 @@ describe("AdminService", () => {
     prisma.relayerTransaction.findFirst.mockResolvedValue(null);
     prisma.auditLog.findFirst.mockResolvedValue({ createdAt: new Date("2026-06-30T09:00:00.000Z") });
     prisma.liveTradingApproval.findFirst.mockResolvedValue(null);
+    prisma.syncJobRun.findFirst.mockResolvedValue({
+      completedAt: null,
+      createdAt: new Date("2026-06-30T09:05:00.000Z"),
+      failureReason: "provider unavailable",
+      status: "FAILED",
+      updatedAt: new Date("2026-06-30T09:06:00.000Z")
+    });
     const service = new AdminService(
       prisma as never,
       createOrderRouterConfig() as never,
@@ -589,6 +638,13 @@ describe("AdminService", () => {
           key: "funding-readiness",
           severity: "WARNING",
           status: "PENDING"
+        }),
+        expect.objectContaining({
+          evidence:
+            "Latest market sync queue job failed: provider unavailable. This records readiness only and does not enable real CLOB submit.",
+          key: "queue-sync-readiness",
+          severity: "CRITICAL",
+          status: "BLOCKED"
         })
       ])
     });
@@ -633,6 +689,13 @@ describe("AdminService", () => {
         owner: "Engineering",
         status: "READY",
         updatedAt: quoteSyncedAt
+      },
+      {
+        key: "queue-sync-readiness",
+        title: "Queue sync readiness",
+        owner: "Engineering",
+        status: "PENDING",
+        updatedAt: null
       },
       {
         key: "wallet-binding-proof",
@@ -738,6 +801,13 @@ describe("AdminService", () => {
     prisma.depositWallet.findFirst.mockResolvedValue({ updatedAt: depositUpdatedAt });
     prisma.relayerTransaction.findFirst.mockResolvedValue(null);
     prisma.order.findFirst.mockResolvedValue(null);
+    prisma.syncJobRun.findFirst.mockResolvedValue({
+      completedAt: depositUpdatedAt,
+      createdAt: depositUpdatedAt,
+      failureReason: null,
+      status: "SUCCEEDED",
+      updatedAt: depositUpdatedAt
+    });
     const service = new AdminService(
       prisma as never,
       createOrderRouterConfig() as never,
@@ -746,6 +816,13 @@ describe("AdminService", () => {
 
     await expect(service.getGates({ role: "ADMIN" })).resolves.toEqual(
       expect.arrayContaining([
+        {
+          key: "queue-sync-readiness",
+          owner: "Engineering",
+          status: "READY",
+          title: "Queue sync readiness",
+          updatedAt: depositUpdatedAt
+        },
         {
           key: "deposit-wallet-readiness",
           owner: "Compliance",
@@ -778,6 +855,13 @@ describe("AdminService", () => {
       updatedAt: failedAt
     });
     prisma.order.findFirst.mockResolvedValue(null);
+    prisma.syncJobRun.findFirst.mockResolvedValue({
+      completedAt: failedAt,
+      createdAt: failedAt,
+      failureReason: "provider unavailable",
+      status: "FAILED",
+      updatedAt: failedAt
+    });
     const service = new AdminService(
       prisma as never,
       createOrderRouterConfig() as never,
@@ -786,6 +870,14 @@ describe("AdminService", () => {
 
     await expect(service.getGates({ role: "ADMIN" })).resolves.toEqual(
       expect.arrayContaining([
+        {
+          details: "provider unavailable",
+          key: "queue-sync-readiness",
+          owner: "Engineering",
+          status: "BLOCKED",
+          title: "Queue sync readiness",
+          updatedAt: failedAt
+        },
         {
           details: "relayer unavailable",
           key: "deposit-wallet-readiness",

@@ -157,6 +157,7 @@ test("admin risk page shows real trading blockers", async ({ page }) => {
   await expect(page.getByText("不可提交真实订单")).toBeVisible();
   await expect(page.getByText("资金与授权准备状态")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("手动实盘批准").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("队列同步准备状态").first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("批准原因")).toBeVisible();
   await expect(page.getByText("批准人")).toBeVisible();
   await expect(page.getByText("批准时间")).toBeVisible();
@@ -195,21 +196,30 @@ test("admin operations pages show live API status", async ({ page }) => {
   await expect(page.getByText("latestMarketSyncedAt")).toBeVisible();
   await expect(page.getByText("latestMarketQuoteSyncedAt")).toBeVisible();
 
-  await page.route("**/admin/markets/sync", async (route) => {
+  await page.route("**/admin/sync/market", async (route) => {
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
-        error: null,
-        failed: 0,
-        quotesFailed: 0,
-        quotesSynced: 4,
-        synced: 12
+        completedAt: null,
+        createdAt: "2026-06-30T12:00:00.000Z",
+        failureReason: null,
+        id: "sync_run_e2e",
+        metadata: {
+          source: "admin"
+        },
+        queueJobId: "bull_job_e2e",
+        requestedById: "admin_1",
+        result: null,
+        startedAt: null,
+        status: "QUEUED",
+        type: "MARKET_SYNC",
+        updatedAt: "2026-06-30T12:00:00.000Z"
       })
     });
   });
 
-  await page.getByRole("button", { name: "同步市场" }).click();
-  await expect(page.getByText(/市场成功 \d+ \/ 失败 \d+，行情成功 \d+ \/ 失败 \d+/)).toBeVisible({
+  await page.getByRole("button", { name: "排队同步市场" }).click();
+  await expect(page.getByText(/后台任务 sync_run_e2e 已创建，状态 待处理/)).toBeVisible({
     timeout: 30_000
   });
   await expect(page.getByText("lastFailureReason")).toBeVisible();

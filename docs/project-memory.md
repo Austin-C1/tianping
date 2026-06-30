@@ -37,7 +37,7 @@ Real CLOB submit is still not implemented and must stay disabled.
 
 ## Active Module State
 
-Current completed module: `manual-live-approval`.
+Current completed module: `queue-sync-readiness`.
 
 Recent completed modules:
 
@@ -47,6 +47,7 @@ Recent completed modules:
 - `risk-gates`
 - `wallet-funding-readiness`
 - `manual-live-approval`
+- `queue-sync-readiness`
 - `api-client`
 - `api-repositories`
 - `v2-web-business-flow-layer`
@@ -76,6 +77,16 @@ PREVIEWED -> SIGNING_REQUESTED -> SIGNED -> SUBMITTED
 - Manual live approval stores Admin approval/revoke state, reasons, operators, and timestamps in `LiveTradingApproval`.
 - Manual live approval writes `live_approval.approved` and `live_approval.revoked` audit actions.
 - Manual live approval changes the `manual-live-approval` risk gate only. It does not enable real CLOB submit, change order submit behavior, or move user funds.
+- Queue sync readiness stores Admin-triggered sync runs in `SyncJobRun`.
+- `POST /admin/sync/market` enqueues a `MARKET_SYNC` job and returns the active `SyncJobRun`; duplicate active `QUEUED` or `RUNNING` jobs are not re-enqueued.
+- `SyncJobRun_type_active_unique_idx` enforces one active `QUEUED` or `RUNNING` job per sync type at the database level.
+- `SyncJobRun` state transitions are conditional: `QUEUED -> RUNNING`, then `RUNNING -> SUCCEEDED` or `QUEUED/RUNNING -> FAILED`. Terminal jobs are not reprocessed on repeated queue delivery.
+- `GET /admin/sync/jobs` and `GET /admin/sync/jobs/:id` expose Admin-only sync job status.
+- `MarketSyncProcessor` reuses existing `MarketsService.syncActiveMarkets()` for queued market and quote snapshots.
+- Queue sync writes `sync.market.enqueued`, `sync.market.completed`, and `sync.market.failed` audit actions.
+- Admin risk gates include `queue-sync-readiness`, based on the latest `MARKET_SYNC` `SyncJobRun`.
+- Admin operational gates (`/admin/gates`) also include `queue-sync-readiness`, so the Admin Markets page does not fall back to stale pending state.
+- Queue sync readiness does not implement real CLOB submit, live order status sync, live trade sync, live position sync, cancellation, or user fund movement.
 - Web/Admin low-level API access should go through `@pmx/api-client`.
 - Web UI components should call actions/flows rather than feature `*-client` modules directly.
 - API services should prefer repository interfaces under `apps/api/src/infrastructure/repositories` instead of direct Prisma access when a repository contract exists.
@@ -95,6 +106,8 @@ npm run lint
 npm run test:e2e
 ```
 
+Post-review hardening for queue sync readiness passed the same full verification after adding the active-job unique index, conditional state transitions, enqueue failure audit, and `/admin/gates` queue status.
+
 Useful targeted verification:
 
 ```bash
@@ -107,6 +120,27 @@ npm run test:flow --workspace @pmx/web -- ui-client-boundary.test.ts
 npm run test --workspace @pmx/admin -- api-client-boundary.test.ts
 npm run build --workspace @pmx/admin
 npm run test --workspace @pmx/api-client
+```
+
+Queue sync readiness targeted verification on 2026-06-30 passed:
+
+```bash
+npm run prisma:generate
+npm run generate --workspace @pmx/api-client
+npm run test --workspace @pmx/api -- --runTestsByPath src/infrastructure/repositories/prisma-sync-job-runs.repository.spec.ts src/infrastructure/repositories/repositories.module.spec.ts src/jobs/sync-jobs.service.spec.ts src/jobs/sync-jobs.controller.spec.ts src/jobs/market-sync.processor.spec.ts src/admin/admin.service.spec.ts src/openapi/openapi-document.spec.ts
+npm run test --workspace @pmx/api-client
+npm run test --workspace @pmx/admin
+```
+
+Queue sync readiness full verification on 2026-06-30 passed:
+
+```bash
+npm run db:migrate
+npm run db:seed
+npm test
+npm run build
+npm run lint
+npm run test:e2e
 ```
 
 Before the PR conflict resolution on 2026-06-30, the manual live approval implementation passed:
@@ -135,3 +169,7 @@ npm run test:e2e
 On 2026-06-30, `npm audit fix` safely updated lockfile-only dependency versions for `@nestjs/swagger`, nested `js-yaml`, `swagger-ui-dist`, and `viem`.
 
 `npm audit` still reports upstream dependency-chain risks after the safe fix. The main remaining sources are Polymarket SDK chains (`axios`, `ethers@5`, `viem`, `ws`), Nest `multer`, Next `postcss`, and Vite `esbuild`. Do not run `npm audit fix --force` without a dedicated dependency-upgrade module because npm proposes breaking downgrades such as Nest `7.5.5` and Next `9.3.3`, and Polymarket SDK replacement needs contract review.
+
+## Planned Next Module
+
+Next planned module is not selected yet. Do not start live CLOB submit, live order status sync, live trade sync, live position sync, cancellation, or user fund movement without a separate approved module document.
