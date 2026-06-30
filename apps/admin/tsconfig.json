@@ -13,6 +13,7 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@pmx/api-client": ["../../libs/api-client/src/index.ts"],
       "@/*": ["src/*"]
     }
   },

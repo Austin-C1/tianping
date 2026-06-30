@@ -2,6 +2,7 @@ node_modules/
 dist/
 .nx/
 .next/
+.nx/
 coverage/
 playwright-report/
 test-results/

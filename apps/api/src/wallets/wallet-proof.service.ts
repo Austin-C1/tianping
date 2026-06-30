@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { getAddress, verifyMessage } from "viem";
-import { PrismaService } from "../prisma/prisma.service";
+import { WALLETS_REPOSITORY } from "../infrastructure/repositories/repository.tokens";
+import type { WalletsRepository } from "../infrastructure/repositories/repository.types";
 
 interface Operator {
   userId: string;
@@ -30,33 +31,27 @@ const CHALLENGE_TTL_MS = 10 * 60 * 1_000;
 
 @Injectable()
 export class WalletProofService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(WALLETS_REPOSITORY)
+    private readonly walletsRepository: WalletsRepository
+  ) {}
 
   async createChallenge(operator: Operator): Promise<CreateWalletChallengeResult> {
     const nonce = randomUUID();
     const message = this.challengeMessage(nonce);
     const expiresAt = new Date(Date.now() + CHALLENGE_TTL_MS);
 
-    return this.prisma.walletChallenge.create({
-      data: {
-        expiresAt,
-        message,
-        nonce,
-        userId: operator.userId
-      },
-      select: {
-        expiresAt: true,
-        message: true,
-        nonce: true
-      }
+    return this.walletsRepository.createChallenge({
+      expiresAt,
+      message,
+      nonce,
+      userId: operator.userId
     });
   }
 
   async verifyWallet(input: VerifyWalletInput, operator: Operator): Promise<VerifyWalletResult> {
     const address = this.normalizeAddress(input.address);
-    const challenge = await this.prisma.walletChallenge.findUnique({
-      where: { nonce: input.nonce }
-    });
+    const challenge = await this.walletsRepository.findChallengeByNonce(input.nonce);
 
     if (!challenge || challenge.userId !== operator.userId) {
       throw new BadRequestException("Wallet challenge is not valid");
@@ -80,31 +75,17 @@ export class WalletProofService {
       throw new BadRequestException("Wallet signature is not valid");
     }
 
-    await this.prisma.wallet.upsert({
-      create: {
-        address,
-        chainId: input.chainId,
-        type: "EOA",
-        userId: operator.userId
-      },
-      update: {},
-      where: {
-        userId_type_address_chainId: {
-          address,
-          chainId: input.chainId,
-          type: "EOA",
-          userId: operator.userId
-        }
-      }
+    await this.walletsRepository.connectEoaWallet({
+      address,
+      chainId: input.chainId,
+      userId: operator.userId
     });
 
-    await this.prisma.walletChallenge.update({
-      data: {
-        address,
-        chainId: input.chainId,
-        consumedAt: new Date()
-      },
-      where: { id: challenge.id }
+    await this.walletsRepository.consumeChallenge({
+      address,
+      chainId: input.chainId,
+      challengeId: challenge.id,
+      consumedAt: new Date()
     });
 
     return {

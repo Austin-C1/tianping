@@ -15,25 +15,26 @@ describe("AuthService", () => {
       create: jest.fn()
     }
   });
-  const createAuditLogService = () => ({
-    record: jest.fn().mockResolvedValue(undefined)
+
+  const createAuditLogsRepository = () => ({
+    create: jest.fn().mockResolvedValue(undefined)
   });
+
+  const createService = (
+    prisma: ReturnType<typeof createPrisma>,
+    auditLogsRepository: ReturnType<typeof createAuditLogsRepository>
+  ) => new (AuthService as any)(prisma, auditLogsRepository, passwordService, tokenService);
 
   it("registers a new user with normalized email and hashed password", async () => {
     const prisma = createPrisma();
-    const auditLogService = createAuditLogService();
+    const auditLogsRepository = createAuditLogsRepository();
     prisma.user.findUnique.mockResolvedValue(null);
     prisma.user.create.mockResolvedValue({
       id: "user_123",
       email: "person@example.com",
       role: "USER"
     });
-    const service = new AuthService(
-      prisma as never,
-      passwordService,
-      tokenService,
-      auditLogService as never
-    );
+    const service = createService(prisma, auditLogsRepository);
 
     const result = await service.register({
       email: " Person@Example.COM ",
@@ -56,7 +57,7 @@ describe("AuthService", () => {
         role: "USER"
       }
     });
-    expect(auditLogService.record).toHaveBeenCalledWith({
+    expect(auditLogsRepository.create).toHaveBeenCalledWith({
       action: "auth.register",
       metadata: {
         email: "person@example.com"
@@ -67,17 +68,12 @@ describe("AuthService", () => {
 
   it("rejects duplicate registrations without writing audit logs", async () => {
     const prisma = createPrisma();
-    const auditLogService = createAuditLogService();
+    const auditLogsRepository = createAuditLogsRepository();
     prisma.user.findUnique.mockResolvedValue({
       id: "user_123",
       email: "person@example.com"
     });
-    const service = new AuthService(
-      prisma as never,
-      passwordService,
-      tokenService,
-      auditLogService as never
-    );
+    const service = createService(prisma, auditLogsRepository);
 
     await expect(
       service.register({
@@ -85,12 +81,12 @@ describe("AuthService", () => {
         password: "long-enough-password"
       })
     ).rejects.toBeInstanceOf(ConflictException);
-    expect(auditLogService.record).not.toHaveBeenCalled();
+    expect(auditLogsRepository.create).not.toHaveBeenCalled();
   });
 
   it("logs in an existing user with a valid password", async () => {
     const prisma = createPrisma();
-    const auditLogService = createAuditLogService();
+    const auditLogsRepository = createAuditLogsRepository();
     const passwordHash = await passwordService.hash("long-enough-password");
     prisma.user.findUnique.mockResolvedValue({
       id: "user_123",
@@ -98,12 +94,7 @@ describe("AuthService", () => {
       role: "ADMIN",
       passwordHash
     });
-    const service = new AuthService(
-      prisma as never,
-      passwordService,
-      tokenService,
-      auditLogService as never
-    );
+    const service = createService(prisma, auditLogsRepository);
 
     const result = await service.login({
       email: "person@example.com",
@@ -113,7 +104,7 @@ describe("AuthService", () => {
     expect(result.accessToken).toBe("access-token");
     expect(result.user.email).toBe("person@example.com");
     expect(result.user.role).toBe("ADMIN");
-    expect(auditLogService.record).toHaveBeenCalledWith({
+    expect(auditLogsRepository.create).toHaveBeenCalledWith({
       action: "auth.login",
       metadata: {
         email: "person@example.com"
@@ -124,19 +115,14 @@ describe("AuthService", () => {
 
   it("rejects login with an invalid password without writing audit logs", async () => {
     const prisma = createPrisma();
-    const auditLogService = createAuditLogService();
+    const auditLogsRepository = createAuditLogsRepository();
     const passwordHash = await passwordService.hash("long-enough-password");
     prisma.user.findUnique.mockResolvedValue({
       id: "user_123",
       email: "person@example.com",
       passwordHash
     });
-    const service = new AuthService(
-      prisma as never,
-      passwordService,
-      tokenService,
-      auditLogService as never
-    );
+    const service = createService(prisma, auditLogsRepository);
 
     await expect(
       service.login({
@@ -144,17 +130,18 @@ describe("AuthService", () => {
         password: "wrong-password"
       })
     ).rejects.toBeInstanceOf(UnauthorizedException);
-    expect(auditLogService.record).not.toHaveBeenCalled();
+    expect(auditLogsRepository.create).not.toHaveBeenCalled();
   });
 
   it("returns the current user with role", async () => {
     const prisma = createPrisma();
+    const auditLogsRepository = createAuditLogsRepository();
     prisma.user.findUnique.mockResolvedValue({
       id: "user_123",
       email: "person@example.com",
       role: "ADMIN"
     });
-    const service = new AuthService(prisma as never, passwordService, tokenService);
+    const service = createService(prisma, auditLogsRepository);
 
     await expect(service.getCurrentUser("user_123")).resolves.toEqual({
       id: "user_123",

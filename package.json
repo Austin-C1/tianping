@@ -5,13 +5,20 @@
   "description": "Non-custodial Polymarket third-party base trading platform.",
   "workspaces": [
     "apps/*",
+    "libs/*",
     "packages/*"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace @pmx/web\" \"npm run dev --workspace @pmx/admin\" \"npm run start:dev --workspace @pmx/api\"",
     "dev:admin": "npm run dev --workspace @pmx/admin",
-    "build": "npm run build --workspace @pmx/shared && npm run build --workspace @pmx/api && npm run build --workspace @pmx/web && npm run build --workspace @pmx/admin",
-    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspace @pmx/contracts && npm run build --workspace @pmx/domain && npm run build --workspace @pmx/shared && npm run build --workspace @pmx/api-client && npm run build --workspace @pmx/api && npm run build --workspace @pmx/web && npm run build --workspace @pmx/admin",
+    "test": "npm run test:nx-workspace && npm run test --workspaces --if-present",
+    "test:nx-workspace": "node --test tools/workspace/nx-workspace.test.mjs",
+    "nx": "nx",
+    "nx:graph": "nx graph",
+    "affected": "nx affected",
+    "test:flow": "npm run test:flow --workspace @pmx/web --",
+    "test:flows": "npm run test:flows --workspace @pmx/web",
     "test:e2e": "playwright test",
     "prisma:generate": "npm run prisma:generate --workspace @pmx/api",
     "db:migrate": "npm run prisma:migrate --workspace @pmx/api",
@@ -21,6 +28,7 @@
   "devDependencies": {
     "@playwright/test": "latest",
     "concurrently": "latest",
+    "nx": "^23.0.1",
     "typescript": "5.6.3"
   },
   "engines": {

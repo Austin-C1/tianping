@@ -1,178 +1,80 @@
-import { get } from './http'
-import { post } from './http'
+import type {
+  AdminGate,
+  AdminGateStatus,
+  AdminSummary,
+  LiveApprovalReason,
+  LiveApprovalStatus,
+  ManagedAuditLog,
+  ManagedOrder,
+  ManagedUser,
+  MarketSyncResult,
+  OrderRouterEnvironment,
+  OrderRouterMode,
+  RiskGate,
+  RiskGateCategory,
+  RiskGateReport,
+  RiskGateSeverity
+} from '@pmx/api-client'
+import { createAdminApiClient, runAdminApiRequest } from './http'
 
-export interface AdminSummary {
-  registeredUsers: number
-  adminUsers: number
-  walletsConnected: number
-  marketsSynced: number
-  latestMarketSyncedAt: string | null
-  marketQuotesSynced: number
-  latestMarketQuoteSyncedAt: string | null
-  ordersPreviewed: number
-  openRiskEvents: number
+export type {
+  AdminGate,
+  AdminGateStatus,
+  AdminSummary,
+  LiveApprovalReason,
+  LiveApprovalStatus,
+  ManagedAuditLog,
+  ManagedOrder,
+  ManagedUser,
+  MarketSyncResult,
+  OrderRouterEnvironment,
+  OrderRouterMode,
+  RiskGate,
+  RiskGateCategory,
+  RiskGateReport,
+  RiskGateSeverity
+} from '@pmx/api-client'
+
+export function fetchAdminUsers(): Promise<ManagedUser[]> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.listUsers())
 }
 
-export type AdminGateStatus = 'READY' | 'PENDING' | 'BLOCKED'
-
-export interface AdminGate {
-  key: string
-  title: string
-  owner: string
-  status: AdminGateStatus
-  updatedAt: string | null
-  details?: string | null
+export function fetchAdminOrders(): Promise<ManagedOrder[]> {
+  return runAdminApiRequest(() => createAdminApiClient().orders.list())
 }
 
-export type OrderRouterMode = 'preview' | 'paper' | 'live'
-
-export interface OrderRouterEnvironment {
-  mode: OrderRouterMode
-  clobHost: string
-  chainId: number | null
-  builderCodeConfigured: boolean
-  relayerConfigured: boolean
-  rpcConfigured: boolean
-  liveTradingEnabled: boolean
+export function fetchAdminAuditLogs(): Promise<ManagedAuditLog[]> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.getAuditLogs())
 }
 
-export interface ManagedUser {
-  id: string
-  email: string
-  role: 'ADMIN' | 'USER'
-  createdAt: string
-  walletCount: number
-  walletStatus: 'CONNECTED' | 'NOT_CONNECTED'
-  primaryWalletAddress: string | null
+export function fetchRiskGateReport(): Promise<RiskGateReport> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.getRiskGateReport())
 }
 
-export interface ManagedOrder {
-  clobOrderId: string | null
-  createdAt: string
-  failureReason: string | null
-  id: string
-  market: {
-    marketId: string
-    question: string
-  } | null
-  outcome: string | null
-  price: string
-  size: string
-  status: string
-  submittedAt: string | null
-  updatedAt: string
+export function fetchLiveApproval(): Promise<LiveApprovalStatus> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.getLiveApproval())
 }
 
-export interface ManagedAuditLog {
-  id: string
-  action: string
-  userId: string | null
-  userEmail: string | null
-  ipAddress: string | null
-  userAgent: string | null
-  metadata: unknown | null
-  createdAt: string
+export function approveLiveTrading(body: LiveApprovalReason): Promise<LiveApprovalStatus> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.approveLiveTrading(body))
 }
 
-export type RiskGateCategory = 'environment' | 'market' | 'wallet' | 'compliance' | 'risk'
-export type RiskGateSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
-
-export interface RiskGate {
-  key: string
-  title: string
-  category: RiskGateCategory
-  status: AdminGateStatus
-  severity: RiskGateSeverity
-  blocking: boolean
-  description: string
-  evidence: string
-  updatedAt: string | null
+export function revokeLiveTrading(body: LiveApprovalReason): Promise<LiveApprovalStatus> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.revokeLiveTrading(body))
 }
 
-export interface RiskGateReport {
-  generatedAt: string
-  mode: OrderRouterMode
-  liveTradingEnabled: boolean
-  canSubmitLiveOrders: boolean
-  blockingCount: number
-  warningCount: number
-  gates: RiskGate[]
+export function fetchAdminSummary(): Promise<AdminSummary> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.getSummary())
 }
 
-export type LiveApprovalStatusValue = 'APPROVED' | 'NOT_APPROVED'
-export type LiveApprovalRecordStatus = 'APPROVED' | 'REVOKED'
-
-export interface LiveApprovalRecord {
-  id: string
-  status: LiveApprovalRecordStatus
-  approvalReason: string
-  approvedById: string | null
-  approvedByEmail: string | null
-  approvedAt: string
-  revokeReason: string | null
-  revokedById: string | null
-  revokedByEmail: string | null
-  revokedAt: string | null
+export function fetchAdminGates(): Promise<AdminGate[]> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.getGates())
 }
 
-export interface LiveApprovalStatus {
-  status: LiveApprovalStatusValue
-  latestApproval: LiveApprovalRecord | null
-  safetyNotice: string
+export function fetchAdminEnvironment(): Promise<OrderRouterEnvironment> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.getEnvironment())
 }
 
-export interface LiveApprovalReason {
-  reason: string
-}
-
-export function fetchAdminUsers() {
-  return get<ManagedUser[]>('/admin/users')
-}
-
-export function fetchAdminOrders() {
-  return get<ManagedOrder[]>('/orders')
-}
-
-export function fetchAdminAuditLogs() {
-  return get<ManagedAuditLog[]>('/admin/audit')
-}
-
-export function fetchRiskGateReport() {
-  return get<RiskGateReport>('/admin/risk/gates')
-}
-
-export function fetchLiveApproval() {
-  return get<LiveApprovalStatus>('/admin/live-approval')
-}
-
-export function approveLiveTrading(body: LiveApprovalReason) {
-  return post<LiveApprovalStatus, LiveApprovalReason>('/admin/live-approval/approve', body)
-}
-
-export function revokeLiveTrading(body: LiveApprovalReason) {
-  return post<LiveApprovalStatus, LiveApprovalReason>('/admin/live-approval/revoke', body)
-}
-
-export function fetchAdminSummary() {
-  return get<AdminSummary>('/admin/summary')
-}
-
-export function fetchAdminGates() {
-  return get<AdminGate[]>('/admin/gates')
-}
-
-export function fetchAdminEnvironment() {
-  return get<OrderRouterEnvironment>('/admin/environment')
-}
-
-export interface MarketSyncResult {
-  synced: number
-  failed: number
-  quotesSynced: number
-  quotesFailed: number
-  error?: string
-}
-
-export function syncMarkets() {
-  return post<MarketSyncResult, Record<string, never>>('/admin/markets/sync', {})
+export function syncMarkets(): Promise<MarketSyncResult> {
+  return runAdminApiRequest(() => createAdminApiClient().markets.sync())
 }

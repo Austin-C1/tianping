@@ -1,22 +1,21 @@
 import { ConflictException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
-import { AuditLogService } from "../compliance/audit-log.service";
+import { AUDIT_LOGS_REPOSITORY } from "../infrastructure/repositories/repository.tokens";
+import type { AuditLogsRepository } from "../infrastructure/repositories/repository.types";
 import { PrismaService } from "../prisma/prisma.service";
+import type { AuthResult, AuthUser } from "./auth.types";
 import type { LoginDto } from "./dto/login.dto";
 import type { RegisterDto } from "./dto/register.dto";
 import { PasswordService } from "./password.service";
 import { TokenService } from "./token.service";
-import type { AuthResult, AuthUser } from "./auth.types";
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(AUDIT_LOGS_REPOSITORY)
+    private readonly auditLogsRepository: AuditLogsRepository,
     private readonly passwordService: PasswordService,
-    private readonly tokenService: TokenService,
-    @Inject(AuditLogService)
-    private readonly auditLogService: Pick<AuditLogService, "record"> = {
-      record: async () => undefined
-    }
+    private readonly tokenService: TokenService
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResult> {
@@ -101,7 +100,7 @@ export class AuthService {
     action: "auth.register" | "auth.login",
     email: string
   ): Promise<void> {
-    await this.auditLogService.record({
+    await this.auditLogsRepository.create({
       action,
       metadata: {
         email

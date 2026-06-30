@@ -1,10 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LanguageProvider } from "../../features/i18n/language-provider";
-import { emptyPortfolio, fetchPortfolio } from "../../features/portfolio/portfolio-client";
+import { emptyPortfolio, loadPortfolio } from "../../features/portfolio/portfolio-actions";
 import PortfolioPage from "./page";
 
-vi.mock("../../features/portfolio/portfolio-client", () => ({
+vi.mock("../../features/portfolio/portfolio-actions", () => ({
   emptyPortfolio: {
     positions: [],
     summary: {
@@ -13,20 +13,20 @@ vi.mock("../../features/portfolio/portfolio-client", () => ({
     },
     trades: []
   },
-  fetchPortfolio: vi.fn()
+  loadPortfolio: vi.fn()
 }));
 
-const fetchPortfolioMock = vi.mocked(fetchPortfolio);
+const loadPortfolioMock = vi.mocked(loadPortfolio);
 
 describe("PortfolioPage", () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.localStorage.setItem("pmx.locale", "en");
-    fetchPortfolioMock.mockReset();
+    loadPortfolioMock.mockReset();
   });
 
   it("shows paper positions and recent paper trades", async () => {
-    fetchPortfolioMock.mockResolvedValue({
+    loadPortfolioMock.mockResolvedValue({
       positions: [
         {
           averagePrice: "0.5",
@@ -63,7 +63,7 @@ describe("PortfolioPage", () => {
   });
 
   it("keeps the empty portfolio state when there are no paper rows", async () => {
-    fetchPortfolioMock.mockResolvedValue(emptyPortfolio);
+    loadPortfolioMock.mockResolvedValue(emptyPortfolio);
 
     renderPortfolio();
 

@@ -13,7 +13,7 @@ import {
   type CreateDepositWalletIntentResult,
   type DepositWalletStatus,
   type WalletReadiness
-} from "./wallet-client";
+} from "./wallet-actions";
 
 declare global {
   interface Window {

@@ -23,6 +23,7 @@ export default ({ mode }: { mode: string }) => {
     },
     resolve: {
       alias: {
+        '@pmx/api-client': fileURLToPath(new URL('../../libs/api-client/src/index.ts', import.meta.url)),
         '@': fileURLToPath(new URL('./src', import.meta.url)),
         '@views': resolvePath('src/views')
       }

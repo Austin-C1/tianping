@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import type { Route } from "next";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { appendActivity, appendOrderPreviewActivity } from "../activity/activity-store";
@@ -15,17 +15,17 @@ import {
   type OrderTicketPreview
 } from "../trading/order-ticket";
 import {
-  createSigningIntent,
-  previewOrder,
-  saveSignedOrder,
-  submitOrder
-} from "../trading/order-preview-client";
+  createPaperSigningIntent,
+  previewOrderForMarket,
+  savePaperSignedOrder,
+  submitPaperOrder
+} from "../../flows/trade.flow";
 import {
   localizeMarketCategory,
   localizeMarketQuestion,
   localizeOutcome
 } from "./market-localization";
-import { fetchMarkets, type MarketListItem } from "./markets-client";
+import { listMarkets, type MarketListItem } from "./markets-actions";
 
 interface MarketDetailPageProps {
   initialMarketId: string;
@@ -125,7 +125,7 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
   const lastActivityKey = useRef("");
 
   useEffect(() => {
-    fetchMarkets()
+    listMarkets()
       .then((items) => {
         setMarkets(items);
         setStatus("ready");
@@ -134,8 +134,7 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
   }, []);
 
   const displayMarkets = useMemo(
-    () =>
-      markets.map((market) => toDisplayMarket(market, locale)),
+    () => markets.map((market) => toDisplayMarket(market, locale)),
     [locale, markets]
   );
   const selectedMarket = displayMarkets.find(
@@ -191,9 +190,9 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
         outcome: preview.outcome,
         price: preview.price
       });
-      void previewOrder({
+      void previewOrderForMarket({
         amountUsd: preview.amountUsd,
-        marketId: selectedMarket.source.marketId,
+        market: selectedMarket.source,
         outcomeIndex,
         orderType: "FAK"
       })
@@ -227,16 +226,8 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
     });
 
     try {
-      const signingIntent = await createSigningIntent({ orderId: previewOrderId });
-      if (!signingIntent) {
-        setPaperStatus({
-          label: text.paperFailed,
-          detail: text.paperLoginRequired
-        });
-        return;
-      }
-
-      const signedOrder = await saveSignedOrder({
+      const signingIntent = await createPaperSigningIntent({ orderId: previewOrderId });
+      const signedOrder = await savePaperSignedOrder({
         orderId: signingIntent.id,
         signedPayload: {
           mode: "paper",
@@ -244,22 +235,7 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
           signingPayload: signingIntent.signingPayload
         }
       });
-      if (!signedOrder) {
-        setPaperStatus({
-          label: text.paperFailed,
-          detail: text.paperLoginRequired
-        });
-        return;
-      }
-
-      const submittedOrder = await submitOrder({ orderId: signedOrder.id });
-      if (!submittedOrder) {
-        setPaperStatus({
-          label: text.paperFailed,
-          detail: text.paperLoginRequired
-        });
-        return;
-      }
+      const submittedOrder = await submitPaperOrder({ orderId: signedOrder.id });
 
       setPaperStatus({
         label: text.paperSubmitted,
@@ -277,7 +253,6 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
     previewOrderId,
     text.paperFailed,
     text.paperFailedDetail,
-    text.paperLoginRequired,
     text.paperSigning,
     text.paperSigningDetail,
     text.paperSubmitted,
@@ -335,10 +310,16 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
           </div>
 
           <div className="detail-stats">
-            <Metric label={text.statusLabel} value={selectedMarket.source.active && !selectedMarket.source.closed ? text.status : text.previewOnly} />
+            <Metric
+              label={text.statusLabel}
+              value={selectedMarket.source.active && !selectedMarket.source.closed ? text.status : text.previewOnly}
+            />
             <Metric label={text.volume} value={formatUsd(selectedMarket.source.volume)} />
             <Metric label={text.liquidity} value={formatUsd(selectedMarket.source.liquidity)} />
-            <Metric label={locale === "zh-CN" ? "最后同步" : "Last sync"} value={formatDateTime(selectedMarket.source.syncedAt, locale)} />
+            <Metric
+              label={locale === "zh-CN" ? "最后同步" : "Last sync"}
+              value={formatDateTime(selectedMarket.source.syncedAt, locale)}
+            />
           </div>
 
           <section className="feed-section">

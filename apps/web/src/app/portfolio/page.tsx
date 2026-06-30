@@ -5,11 +5,11 @@ import { useLanguage } from "../../features/i18n/language-provider";
 import { WebTopbar } from "../../features/layout/web-topbar";
 import {
   emptyPortfolio,
-  fetchPortfolio,
+  loadPortfolio,
   type PortfolioPosition,
   type PortfolioResponse,
   type PortfolioTrade
-} from "../../features/portfolio/portfolio-client";
+} from "../../features/portfolio/portfolio-actions";
 
 const copy = {
   "zh-CN": {
@@ -52,7 +52,7 @@ export default function PortfolioPage() {
   useEffect(() => {
     let mounted = true;
 
-    fetchPortfolio()
+    loadPortfolio()
       .then((nextPortfolio) => {
         if (mounted) {
           setPortfolio(nextPortfolio);

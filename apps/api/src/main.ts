@@ -2,6 +2,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
+import { setupOpenApi } from "./openapi/openapi-document";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -26,6 +27,7 @@ async function bootstrap() {
       transform: true
     })
   );
+  setupOpenApi(app);
 
   await app.listen(port);
 }

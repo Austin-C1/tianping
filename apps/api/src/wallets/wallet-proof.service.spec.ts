@@ -9,49 +9,40 @@ describe("WalletProofService", () => {
     "0x59c6995e998f97a5a0044966f0945387d863a4e64a88c8f1f1d5d8b0f0000001"
   );
 
-  const createPrisma = () => ({
-    walletChallenge: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn()
-    },
-    wallet: {
-      upsert: jest.fn()
-    }
+  const createWalletsRepository = () => ({
+    connectEoaWallet: jest.fn(),
+    consumeChallenge: jest.fn(),
+    createChallenge: jest.fn(),
+    findChallengeByNonce: jest.fn()
   });
 
   it("creates a one-time wallet binding challenge", async () => {
-    const prisma = createPrisma();
-    prisma.walletChallenge.create.mockImplementation(({ data }) =>
+    const walletsRepository = createWalletsRepository();
+    walletsRepository.createChallenge.mockImplementation((input) =>
       Promise.resolve({
-        id: "challenge_1",
-        ...data
+        expiresAt: input.expiresAt,
+        message: input.message,
+        nonce: input.nonce
       })
     );
-    const service = new WalletProofService(prisma as never);
+    const service = new WalletProofService(walletsRepository as never);
 
     await expect(service.createChallenge({ userId })).resolves.toMatchObject({
       expiresAt: expect.any(Date),
       message: expect.stringContaining("PMX wallet binding"),
       nonce: expect.any(String)
     });
-    expect(prisma.walletChallenge.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        message: expect.stringContaining("PMX wallet binding"),
-        nonce: expect.any(String),
-        userId
-      }),
-      select: {
-        expiresAt: true,
-        message: true,
-        nonce: true
-      }
+    expect(walletsRepository.createChallenge).toHaveBeenCalledWith({
+      expiresAt: expect.any(Date),
+      message: expect.stringContaining("PMX wallet binding"),
+      nonce: expect.any(String),
+      userId
     });
   });
 
   it("verifies an EOA signature and stores the wallet", async () => {
-    const prisma = createPrisma();
-    prisma.walletChallenge.findUnique.mockResolvedValue({
+    const walletsRepository = createWalletsRepository();
+    walletsRepository.findChallengeByNonce.mockResolvedValue({
       id: "challenge_1",
       userId,
       nonce: "nonce_1",
@@ -59,13 +50,13 @@ describe("WalletProofService", () => {
       expiresAt: new Date(Date.now() + 60_000),
       consumedAt: null
     });
-    prisma.wallet.upsert.mockResolvedValue({
+    walletsRepository.connectEoaWallet.mockResolvedValue({
       address: account.address,
       chainId: 137,
       type: "EOA"
     });
     const signature = await account.signMessage({ message: challengeMessage });
-    const service = new WalletProofService(prisma as never);
+    const service = new WalletProofService(walletsRepository as never);
 
     await expect(
       service.verifyWallet(
@@ -82,39 +73,25 @@ describe("WalletProofService", () => {
       chainId: 137,
       status: "CONNECTED"
     });
-    expect(prisma.wallet.upsert).toHaveBeenCalledWith({
-      create: {
-        address: account.address,
-        chainId: 137,
-        type: "EOA",
-        userId
-      },
-      update: {},
-      where: {
-        userId_type_address_chainId: {
-          address: account.address,
-          chainId: 137,
-          type: "EOA",
-          userId
-        }
-      }
+    expect(walletsRepository.connectEoaWallet).toHaveBeenCalledWith({
+      address: account.address,
+      chainId: 137,
+      userId
     });
-    expect(prisma.walletChallenge.update).toHaveBeenCalledWith({
-      data: {
-        address: account.address,
-        chainId: 137,
-        consumedAt: expect.any(Date)
-      },
-      where: { id: "challenge_1" }
+    expect(walletsRepository.consumeChallenge).toHaveBeenCalledWith({
+      address: account.address,
+      chainId: 137,
+      challengeId: "challenge_1",
+      consumedAt: expect.any(Date)
     });
   });
 
   it("rejects expired, consumed, and invalid wallet challenges", async () => {
-    const prisma = createPrisma();
-    const service = new WalletProofService(prisma as never);
+    const walletsRepository = createWalletsRepository();
+    const service = new WalletProofService(walletsRepository as never);
     const signature = await account.signMessage({ message: challengeMessage });
 
-    prisma.walletChallenge.findUnique.mockResolvedValueOnce({
+    walletsRepository.findChallengeByNonce.mockResolvedValueOnce({
       id: "challenge_1",
       userId,
       nonce: "nonce_1",
@@ -126,7 +103,7 @@ describe("WalletProofService", () => {
       service.verifyWallet({ address: account.address, chainId: 137, nonce: "nonce_1", signature }, { userId })
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    prisma.walletChallenge.findUnique.mockResolvedValueOnce({
+    walletsRepository.findChallengeByNonce.mockResolvedValueOnce({
       id: "challenge_1",
       userId,
       nonce: "nonce_1",
@@ -138,7 +115,7 @@ describe("WalletProofService", () => {
       service.verifyWallet({ address: account.address, chainId: 137, nonce: "nonce_1", signature }, { userId })
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    prisma.walletChallenge.findUnique.mockResolvedValueOnce({
+    walletsRepository.findChallengeByNonce.mockResolvedValueOnce({
       id: "challenge_1",
       userId,
       nonce: "nonce_1",

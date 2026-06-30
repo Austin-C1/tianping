@@ -1,0 +1,2012 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResultDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResultDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/admin/summary": {
+      "get": {
+        "operationId": "AdminController_getSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/gates": {
+      "get": {
+        "operationId": "AdminController_getGates",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminGateDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/audit": {
+      "get": {
+        "operationId": "AdminController_getAuditLogs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/risk/gates": {
+      "get": {
+        "operationId": "AdminController_getRiskGateReport",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/live-approval": {
+      "get": {
+        "operationId": "AdminController_getLiveApproval",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/live-approval/approve": {
+      "post": {
+        "operationId": "AdminController_approveLiveTrading",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveApprovalReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/live-approval/revoke": {
+      "post": {
+        "operationId": "AdminController_revokeLiveTrading",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveApprovalReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/environment": {
+      "get": {
+        "operationId": "AdminController_getEnvironment",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderRouterEnvironmentDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "operationId": "UsersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ManagedUserDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/markets": {
+      "get": {
+        "operationId": "MarketsController_listMarkets",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MarketListItemDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "markets"
+        ]
+      }
+    },
+    "/markets/{id}": {
+      "get": {
+        "operationId": "MarketsController_getMarket",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketListItemDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "markets"
+        ]
+      }
+    },
+    "/admin/markets/sync": {
+      "post": {
+        "operationId": "MarketsController_syncMarkets",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketSyncResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "markets"
+        ]
+      }
+    },
+    "/wallets/nonce": {
+      "post": {
+        "operationId": "WalletProofController_createChallenge",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletChallengeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallets"
+        ]
+      }
+    },
+    "/wallets/verify": {
+      "post": {
+        "operationId": "WalletProofController_verify",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyWalletDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyWalletResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallets"
+        ]
+      }
+    },
+    "/wallets/me": {
+      "get": {
+        "operationId": "WalletsController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletReadinessDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallets"
+        ]
+      }
+    },
+    "/wallets/deposit": {
+      "get": {
+        "operationId": "WalletsController_getDeposit",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositWalletStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallets"
+        ]
+      }
+    },
+    "/wallets/deposit/create-intent": {
+      "post": {
+        "operationId": "WalletsController_createDepositWalletIntent",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDepositWalletIntentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateDepositWalletIntentResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallets"
+        ]
+      }
+    },
+    "/wallets/deposit/submit-signed-batch": {
+      "post": {
+        "operationId": "WalletsController_submitDepositWalletSignedBatch",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitDepositWalletSignedBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmitDepositWalletSignedBatchResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallets"
+        ]
+      }
+    },
+    "/wallets/deposit/status": {
+      "get": {
+        "operationId": "WalletsController_getDepositWalletStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositWalletStatusDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallets"
+        ]
+      }
+    },
+    "/wallets/balance-allowance": {
+      "get": {
+        "operationId": "WalletsController_getBalanceAllowance",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletFundingStateDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallets"
+        ]
+      }
+    },
+    "/wallets/balance-allowance/refresh": {
+      "post": {
+        "operationId": "WalletsController_refreshBalanceAllowance",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletFundingStateDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallets"
+        ]
+      }
+    },
+    "/orders/preview": {
+      "post": {
+        "operationId": "OrdersController_preview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewOrderResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/signing-intent": {
+      "post": {
+        "operationId": "OrdersController_createSigningIntent",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderIdDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/signed": {
+      "post": {
+        "operationId": "OrdersController_saveSignedOrder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveSignedOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/submit": {
+      "post": {
+        "operationId": "OrdersController_submitOrder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderIdDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders": {
+      "get": {
+        "operationId": "OrdersController_listOrders",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "operationId": "OrdersController_getOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/portfolio": {
+      "get": {
+        "operationId": "PortfolioController_getPortfolio",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Portfolio"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "PMX API",
+    "description": "Polymarket trading platform API",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "HealthResponseDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "service": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "service",
+          "stage"
+        ]
+      },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AuthUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email"
+        ]
+      },
+      "AuthResultDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUserDto"
+          }
+        },
+        "required": [
+          "accessToken",
+          "user"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "AdminSummaryDto": {
+        "type": "object",
+        "properties": {
+          "registeredUsers": {
+            "type": "number"
+          },
+          "adminUsers": {
+            "type": "number"
+          },
+          "walletsConnected": {
+            "type": "number"
+          },
+          "marketsSynced": {
+            "type": "number"
+          },
+          "latestMarketSyncedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "marketQuotesSynced": {
+            "type": "number"
+          },
+          "latestMarketQuoteSyncedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ordersPreviewed": {
+            "type": "number"
+          },
+          "openRiskEvents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "registeredUsers",
+          "adminUsers",
+          "walletsConnected",
+          "marketsSynced",
+          "latestMarketSyncedAt",
+          "marketQuotesSynced",
+          "latestMarketQuoteSyncedAt",
+          "ordersPreviewed",
+          "openRiskEvents"
+        ]
+      },
+      "AdminGateDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "READY",
+              "PENDING",
+              "BLOCKED"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "owner",
+          "status",
+          "updatedAt"
+        ]
+      },
+      "LiveApprovalReasonDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "OrderRouterEnvironmentDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "preview",
+              "paper",
+              "live"
+            ]
+          },
+          "clobHost": {
+            "type": "string"
+          },
+          "chainId": {
+            "type": "number",
+            "nullable": true
+          },
+          "builderCodeConfigured": {
+            "type": "boolean"
+          },
+          "relayerConfigured": {
+            "type": "boolean"
+          },
+          "rpcConfigured": {
+            "type": "boolean"
+          },
+          "liveTradingEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mode",
+          "clobHost",
+          "chainId",
+          "builderCodeConfigured",
+          "relayerConfigured",
+          "rpcConfigured",
+          "liveTradingEnabled"
+        ]
+      },
+      "ManagedUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "walletCount": {
+            "type": "number"
+          },
+          "walletStatus": {
+            "type": "string",
+            "enum": [
+              "CONNECTED",
+              "NOT_CONNECTED"
+            ]
+          },
+          "primaryWalletAddress": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "createdAt",
+          "walletCount",
+          "walletStatus",
+          "primaryWalletAddress"
+        ]
+      },
+      "MarketQuoteItemDto": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "string"
+          },
+          "outcomeIndex": {
+            "type": "number"
+          },
+          "tokenId": {
+            "type": "string"
+          },
+          "bestBid": {
+            "type": "string",
+            "nullable": true
+          },
+          "bestAsk": {
+            "type": "string",
+            "nullable": true
+          },
+          "midpoint": {
+            "type": "string",
+            "nullable": true
+          },
+          "spread": {
+            "type": "string",
+            "nullable": true
+          },
+          "minOrderSize": {
+            "type": "string",
+            "nullable": true
+          },
+          "negRisk": {
+            "type": "boolean"
+          },
+          "tickSize": {
+            "type": "string",
+            "nullable": true
+          },
+          "syncedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "outcome",
+          "outcomeIndex",
+          "tokenId",
+          "bestBid",
+          "bestAsk",
+          "midpoint",
+          "spread",
+          "minOrderSize",
+          "tickSize",
+          "syncedAt"
+        ]
+      },
+      "MarketListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "marketId": {
+            "type": "string"
+          },
+          "conditionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "clobTokenIds": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "enableOrderBook": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string",
+            "nullable": true
+          },
+          "question": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "closed": {
+            "type": "boolean"
+          },
+          "outcomes": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "outcomePrices": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "volume": {
+            "type": "string",
+            "nullable": true
+          },
+          "volume24hr": {
+            "type": "string",
+            "nullable": true
+          },
+          "liquidity": {
+            "type": "string",
+            "nullable": true
+          },
+          "syncedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "quotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketQuoteItemDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "marketId",
+          "slug",
+          "question",
+          "category",
+          "active",
+          "closed",
+          "outcomes",
+          "outcomePrices",
+          "volume",
+          "liquidity",
+          "syncedAt"
+        ]
+      },
+      "MarketSyncResultDto": {
+        "type": "object",
+        "properties": {
+          "synced": {
+            "type": "number"
+          },
+          "failed": {
+            "type": "number"
+          },
+          "quotesSynced": {
+            "type": "number"
+          },
+          "quotesFailed": {
+            "type": "number"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "synced",
+          "failed",
+          "quotesSynced",
+          "quotesFailed"
+        ]
+      },
+      "WalletChallengeDto": {
+        "type": "object",
+        "properties": {
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "message": {
+            "type": "string"
+          },
+          "nonce": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expiresAt",
+          "message",
+          "nonce"
+        ]
+      },
+      "VerifyWalletDto": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "chainId": {
+            "type": "number",
+            "minimum": 1
+          },
+          "nonce": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "address",
+          "chainId",
+          "nonce",
+          "signature"
+        ]
+      },
+      "VerifyWalletResultDto": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "chainId": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONNECTED"
+            ]
+          }
+        },
+        "required": [
+          "address",
+          "chainId",
+          "status"
+        ]
+      },
+      "DepositWalletReadinessDto": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "chainId": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "FAILED",
+              "NOT_CREATED",
+              "PENDING",
+              "READY"
+            ]
+          }
+        },
+        "required": [
+          "address",
+          "chainId",
+          "status"
+        ]
+      },
+      "EoaReadinessDto": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "chainId": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONNECTED",
+              "NOT_CONNECTED"
+            ]
+          }
+        },
+        "required": [
+          "address",
+          "chainId",
+          "status"
+        ]
+      },
+      "WalletFundingStateDto": {
+        "type": "object",
+        "properties": {
+          "allowance": {
+            "type": "string",
+            "nullable": true
+          },
+          "balanceCacheStale": {
+            "type": "boolean"
+          },
+          "balanceCacheUpdatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "minimumOrderSize": {
+            "type": "string",
+            "nullable": true
+          },
+          "minimumOrderSizeMet": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "pUsdBalance": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          },
+          "requiredAllowance": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ALLOWANCE_MISSING",
+              "CACHE_STALE",
+              "NO_DEPOSIT_WALLET",
+              "NO_PUSD",
+              "READY"
+            ]
+          }
+        },
+        "required": [
+          "allowance",
+          "balanceCacheStale",
+          "balanceCacheUpdatedAt",
+          "minimumOrderSize",
+          "minimumOrderSizeMet",
+          "pUsdBalance",
+          "reason",
+          "requiredAllowance",
+          "status"
+        ]
+      },
+      "WalletReadinessGateDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "wallet-binding",
+              "deposit-wallet",
+              "funding-allowance",
+              "region-risk"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "READY"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "reason",
+          "status"
+        ]
+      },
+      "RegionReadinessDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "NOT_CHECKED"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "WalletReadinessDto": {
+        "type": "object",
+        "properties": {
+          "canPreview": {
+            "type": "boolean"
+          },
+          "canSign": {
+            "type": "boolean"
+          },
+          "depositWallet": {
+            "$ref": "#/components/schemas/DepositWalletReadinessDto"
+          },
+          "eoa": {
+            "$ref": "#/components/schemas/EoaReadinessDto"
+          },
+          "funding": {
+            "$ref": "#/components/schemas/WalletFundingStateDto"
+          },
+          "gates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletReadinessGateDto"
+            }
+          },
+          "region": {
+            "$ref": "#/components/schemas/RegionReadinessDto"
+          }
+        },
+        "required": [
+          "canPreview",
+          "canSign",
+          "depositWallet",
+          "eoa",
+          "funding",
+          "gates",
+          "region"
+        ]
+      },
+      "WalletOperationSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "failureReason",
+          "updatedAt"
+        ]
+      },
+      "RelayerTransactionSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "relayerTransactionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "relayerTransactionId",
+          "status",
+          "failureReason",
+          "updatedAt"
+        ]
+      },
+      "DepositWalletStatusDto": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "ownerAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "chainId": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "FAILED",
+              "INTENT_CREATED",
+              "NOT_CREATED",
+              "PENDING",
+              "READY"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "latestOperation": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WalletOperationSummaryDto"
+              }
+            ]
+          },
+          "latestRelayerTransaction": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RelayerTransactionSummaryDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "address",
+          "ownerAddress",
+          "chainId",
+          "status",
+          "updatedAt",
+          "latestOperation",
+          "latestRelayerTransaction"
+        ]
+      },
+      "CreateDepositWalletIntentDto": {
+        "type": "object",
+        "properties": {
+          "ownerAddress": {
+            "type": "string"
+          },
+          "chainId": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "ownerAddress",
+          "chainId"
+        ]
+      },
+      "CreateDepositWalletIntentResultDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "CREATE_DEPOSIT_WALLET"
+            ]
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "ownerAddress": {
+            "type": "string"
+          },
+          "chainId": {
+            "type": "number"
+          },
+          "depositWalletAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "relayerRequest": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "INTENT_CREATED",
+              "SUBMITTED",
+              "FAILED"
+            ]
+          },
+          "typedData": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "enum": [
+                  "CREATE_DEPOSIT_WALLET"
+                ],
+                "type": "string"
+              },
+              "chainId": {
+                "type": "number"
+              },
+              "ownerAddress": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "chainId",
+              "ownerAddress"
+            ]
+          }
+        },
+        "required": [
+          "action",
+          "operationId",
+          "ownerAddress",
+          "chainId",
+          "depositWalletAddress",
+          "relayerRequest",
+          "status"
+        ]
+      },
+      "SubmitDepositWalletSignedBatchDto": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string"
+          },
+          "signedBatch": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "operationId",
+          "signedBatch"
+        ]
+      },
+      "SubmitDepositWalletSignedBatchResultDto": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "FAILED"
+            ]
+          },
+          "relayerTransactionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "depositWalletAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "operationId",
+          "status",
+          "relayerTransactionId",
+          "depositWalletAddress",
+          "failureReason"
+        ]
+      },
+      "PreviewOrderDto": {
+        "type": "object",
+        "properties": {
+          "marketId": {
+            "type": "string"
+          },
+          "outcomeIndex": {
+            "type": "number",
+            "minimum": 0
+          },
+          "amountUsd": {
+            "type": "number",
+            "minimum": 0.01
+          },
+          "orderType": {
+            "type": "string",
+            "enum": [
+              "FAK",
+              "FOK"
+            ]
+          }
+        },
+        "required": [
+          "marketId",
+          "outcomeIndex",
+          "amountUsd"
+        ]
+      },
+      "ClobOrderDraftDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "builderCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "negRisk": {
+            "type": "boolean"
+          },
+          "orderType": {
+            "type": "string",
+            "enum": [
+              "FAK",
+              "FOK"
+            ]
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "SELL"
+            ]
+          },
+          "signatureType": {
+            "type": "string"
+          },
+          "tickSize": {
+            "type": "string"
+          },
+          "tokenID": {
+            "type": "string"
+          }
+        }
+      },
+      "PreviewOrderReadinessGateDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "BLOCKED",
+              "PENDING",
+              "READY"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "reason",
+          "status"
+        ]
+      },
+      "PreviewOrderReadinessDto": {
+        "type": "object",
+        "properties": {
+          "canPreview": {
+            "type": "boolean"
+          },
+          "canSign": {
+            "type": "boolean"
+          },
+          "funding": {
+            "$ref": "#/components/schemas/WalletFundingStateDto"
+          },
+          "gates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewOrderReadinessGateDto"
+            }
+          }
+        },
+        "required": [
+          "canPreview",
+          "canSign",
+          "gates"
+        ]
+      },
+      "PreviewOrderResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "builderAttributionStatus": {
+            "type": "string",
+            "enum": [
+              "CONFIGURED",
+              "MISSING"
+            ]
+          },
+          "clob": {
+            "$ref": "#/components/schemas/ClobOrderDraftDto"
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/PreviewOrderReadinessDto"
+          },
+          "submitDisabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "submitDisabled"
+        ]
+      },
+      "OrderIdDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SaveSignedOrderDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}

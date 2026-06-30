@@ -6,11 +6,31 @@
   "scripts": {
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "build": "nest build",
-    "test": "jest --runInBand",
+    "build": "npm run build --workspace @pmx/domain && nest build",
+    "test": "npm run build --workspace @pmx/domain && jest --runInBand",
+    "openapi:generate": "ts-node -r tsconfig-paths/register scripts/generate-openapi.ts",
     "prisma:generate": "node scripts/with-root-env.cjs prisma generate",
     "prisma:migrate": "node scripts/with-root-env.cjs prisma migrate dev",
     "db:seed": "node scripts/with-root-env.cjs ts-node prisma/seed.ts"
+  },
+  "nx": {
+    "name": "api",
+    "tags": ["type:app", "scope:api"],
+    "targets": {
+      "openapi": {
+        "executor": "nx:run-commands",
+        "outputs": ["{projectRoot}/openapi.json"],
+        "options": {
+          "command": "npm run openapi:generate --workspace @pmx/api"
+        }
+      },
+      "serve": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "npm run start:dev --workspace @pmx/api"
+        }
+      }
+    }
   },
   "dependencies": {
     "@nestjs/bullmq": "latest",
@@ -18,6 +38,8 @@
     "@nestjs/config": "latest",
     "@nestjs/core": "latest",
     "@nestjs/platform-express": "latest",
+    "@nestjs/swagger": "^11.4.4",
+    "@pmx/domain": "file:../../libs/domain",
     "@polymarket/builder-relayer-client": "^0.0.10",
     "@polymarket/clob-client-v2": "^1.0.6",
     "@prisma/client": "6.19.3",
@@ -53,11 +75,16 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.ts$": "ts-jest"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
+    "moduleNameMapper": {
+      "^@pmx/contracts$": "<rootDir>/../../../libs/contracts/src/index.ts",
+      "^@pmx/domain$": "<rootDir>/../../../libs/domain/src/index.ts",
+      "^@pmx/shared$": "<rootDir>/../../../packages/shared/src/index.ts"
+    },
     "testEnvironment": "node"
   }
 }

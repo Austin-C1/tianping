@@ -1,12 +1,19 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { toClobOrderDraft } from "@pmx/domain";
 import { Prisma } from "@prisma/client";
-import { AuditLogService } from "../compliance/audit-log.service";
-import { PrismaService } from "../prisma/prisma.service";
+import {
+  AUDIT_LOGS_REPOSITORY,
+  ORDERS_REPOSITORY
+} from "../infrastructure/repositories/repository.tokens";
+import type {
+  AuditLogsRepository,
+  OrderItemRecord,
+  OrdersRepository
+} from "../infrastructure/repositories/repository.types";
 import { WalletReadinessService } from "../wallets/wallet-readiness.service";
 import type { OrderIdDto, SaveSignedOrderDto } from "./dto/order-lifecycle.dto";
 import type { PreviewOrderDto } from "./dto/preview-order.dto";
-import { toClobOrderDraft } from "./order-domain";
 import { PaperOrderProvider } from "./paper-order-provider";
 
 interface Operator {
@@ -20,13 +27,14 @@ const SENSITIVE_KEYS = new Set(["privatekey", "private_key", "mnemonic", "seed",
 @Injectable()
 export class OrdersService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(ORDERS_REPOSITORY)
+    private readonly ordersRepository: OrdersRepository,
     private readonly config: ConfigService,
     private readonly walletReadinessService: WalletReadinessService,
     private readonly paperOrderProvider: PaperOrderProvider = new PaperOrderProvider(),
-    @Inject(AuditLogService)
-    private readonly auditLogService: Pick<AuditLogService, "record"> = {
-      record: async () => undefined
+    @Inject(AUDIT_LOGS_REPOSITORY)
+    private readonly auditLogsRepository: Pick<AuditLogsRepository, "create"> = {
+      create: async () => undefined
     }
   ) {}
 
@@ -36,12 +44,7 @@ export class OrdersService {
       throw new BadRequestException("Order amount must be greater than zero");
     }
 
-    const market = await this.prisma.marketSnapshot.findFirst({
-      include: { quotes: { orderBy: { outcomeIndex: "asc" } } },
-      where: {
-        OR: [{ id: dto.marketId }, { marketId: dto.marketId }, { slug: dto.marketId }]
-      }
-    });
+    const market = await this.ordersRepository.findPreviewMarket(dto.marketId);
 
     if (!market) {
       throw new NotFoundException("Market not found");
@@ -93,28 +96,25 @@ export class OrdersService {
       requiredAmountUsd: amountUsd
     });
 
-    const created = await this.prisma.order.create({
-      data: {
-        builderCode,
-        clobStatus: "PREVIEWED",
-        failureReason: null,
-        funderAddress,
-        marketSnapshotId: market.id,
-        orderType,
-        outcome,
-        price: price.toString(),
-        rawPreview: this.inputJson(clobDraft),
-        rawSignedOrder: undefined,
-        side: "BUY",
-        signatureType: clobDraft.signatureType,
-        size: shares.toString(),
-        status: "PREVIEWED",
-        tokenId: tokenID,
-        userId: operator.userId
-      },
-      select: { id: true }
+    const created = await this.ordersRepository.createPreviewOrder({
+      builderCode,
+      clobStatus: "PREVIEWED",
+      failureReason: null,
+      funderAddress,
+      marketSnapshotId: market.id,
+      orderType,
+      outcome,
+      price: price.toString(),
+      rawPreview: this.inputJson(clobDraft),
+      rawSignedOrder: undefined,
+      side: "BUY",
+      signatureType: clobDraft.signatureType,
+      size: shares.toString(),
+      status: "PREVIEWED",
+      tokenId: tokenID,
+      userId: operator.userId
     });
-    await this.auditLogService.record({
+    await this.auditLogsRepository.create({
       action: "order.previewed",
       metadata: {
         amountUsd,
@@ -148,9 +148,10 @@ export class OrdersService {
   }
 
   async createSigningIntent(dto: OrderIdDto, operator: Operator) {
-    const order = await this.prisma.order.findFirst({
-      select: { id: true, rawPreview: true, status: true },
-      where: this.orderVisibilityWhere(dto.orderId, operator)
+    const order = await this.ordersRepository.findOrderForSigningIntent({
+      orderId: dto.orderId,
+      role: operator.role,
+      userId: operator.userId
     });
 
     if (!order) {
@@ -165,15 +166,7 @@ export class OrdersService {
       throw new BadRequestException("Order preview payload is missing");
     }
 
-    const updated = await this.prisma.order.update({
-      data: {
-        clobStatus: "SIGNING_REQUESTED",
-        failureReason: null,
-        status: "SIGNING_REQUESTED"
-      },
-      select: { id: true, rawPreview: true, status: true },
-      where: { id: order.id }
-    });
+    const updated = await this.ordersRepository.markSigningRequested(order.id);
     await this.recordOrderAudit("order.signing_requested", updated.id, operator.userId);
 
     return {
@@ -183,20 +176,11 @@ export class OrdersService {
     };
   }
 
-  private async recordOrderAudit(action: string, orderId: string, userId: string) {
-    await this.auditLogService.record({
-      action,
-      metadata: {
-        orderId
-      },
-      userId
-    });
-  }
-
   async saveSignedOrder(dto: SaveSignedOrderDto, operator: Operator) {
-    const order = await this.prisma.order.findFirst({
-      select: { id: true, status: true },
-      where: this.orderVisibilityWhere(dto.orderId, operator)
+    const order = await this.ordersRepository.findOrderForSignedPayload({
+      orderId: dto.orderId,
+      role: operator.role,
+      userId: operator.userId
     });
 
     if (!order) {
@@ -208,16 +192,9 @@ export class OrdersService {
     }
 
     const signedPayload = this.sanitizePayload(dto.signedPayload);
-    const updated = await this.prisma.order.update({
-      data: {
-        clobStatus: "SIGNED",
-        failureReason: null,
-        rawSignedOrder: signedPayload,
-        signedPayload,
-        status: "SIGNED"
-      },
-      select: { id: true, rawSignedOrder: true, status: true },
-      where: { id: order.id }
+    const updated = await this.ordersRepository.saveSignedOrder({
+      orderId: order.id,
+      signedPayload
     });
     await this.recordOrderAudit("order.signed", updated.id, operator.userId);
 
@@ -229,19 +206,10 @@ export class OrdersService {
   }
 
   async submitOrder(dto: OrderIdDto, operator: Operator) {
-    const order = await this.prisma.order.findFirst({
-      select: {
-        id: true,
-        marketSnapshotId: true,
-        outcome: true,
-        price: true,
-        rawSignedOrder: true,
-        side: true,
-        size: true,
-        status: true,
-        userId: true
-      },
-      where: this.orderVisibilityWhere(dto.orderId, operator)
+    const order = await this.ordersRepository.findOrderForSubmit({
+      orderId: dto.orderId,
+      role: operator.role,
+      userId: operator.userId
     });
 
     if (!order) {
@@ -270,21 +238,21 @@ export class OrdersService {
       signedPayload: order.rawSignedOrder
     });
     const submittedAt = new Date();
-
-    const updated = await this.prisma.order.update({
-      data: {
-        clobOrderId: submitted.clobOrderId,
-        clobStatus: submitted.status,
-        failureReason: null,
-        signedPayload: this.inputJsonObject(submitted.raw),
-        status: "SUBMITTED",
-        submittedAt
-      },
-      select: this.orderSelect(),
-      where: { id: order.id }
+    const updated = await this.ordersRepository.markOrderSubmitted({
+      clobOrderId: submitted.clobOrderId,
+      clobStatus: submitted.status,
+      orderId: order.id,
+      raw: submitted.raw,
+      submittedAt
     });
-    await this.createPaperFill(order, submitted.clobOrderId, submitted.raw, submittedAt);
-    await this.auditLogService.record({
+
+    await this.ordersRepository.createPaperFill({
+      clobOrderId: submitted.clobOrderId,
+      executedAt: submittedAt,
+      order,
+      raw: submitted.raw
+    });
+    await this.auditLogsRepository.create({
       action: "order.submitted",
       metadata: {
         clobOrderId: submitted.clobOrderId,
@@ -298,33 +266,16 @@ export class OrdersService {
   }
 
   async listOrders(operator: Operator) {
-    const orders = await this.prisma.order.findMany({
-      include: {
-        marketSnapshot: {
-          select: {
-            marketId: true,
-            question: true
-          }
-        }
-      },
-      orderBy: { updatedAt: "desc" },
-      where: operator.role === "ADMIN" ? {} : { userId: operator.userId }
-    });
+    const orders = await this.ordersRepository.listOrders(operator);
 
     return orders.map((order) => this.toOrderItem(order));
   }
 
   async getOrder(id: string, operator: Operator) {
-    const order = await this.prisma.order.findFirst({
-      include: {
-        marketSnapshot: {
-          select: {
-            marketId: true,
-            question: true
-          }
-        }
-      },
-      where: this.orderVisibilityWhere(id, operator)
+    const order = await this.ordersRepository.findOrderById({
+      orderId: id,
+      role: operator.role,
+      userId: operator.userId
     });
 
     if (!order) {
@@ -332,6 +283,16 @@ export class OrdersService {
     }
 
     return this.toOrderItem(order);
+  }
+
+  private async recordOrderAudit(action: string, orderId: string, userId: string) {
+    await this.auditLogsRepository.create({
+      action,
+      metadata: {
+        orderId
+      },
+      userId
+    });
   }
 
   private builderCode(): string | null {
@@ -392,75 +353,6 @@ export class OrdersService {
     return { value } as Prisma.InputJsonObject;
   }
 
-  private orderRouterMode(): "preview" | "paper" | "live" {
-    const value = this.config.get<string>("ORDER_ROUTER_MODE", "preview");
-
-    return value === "paper" || value === "live" ? value : "preview";
-  }
-
-  private orderVisibilityWhere(id: string, operator: Operator) {
-    return operator.role === "ADMIN" ? { id } : { id, userId: operator.userId };
-  }
-
-  private async createPaperFill(
-    order: {
-      id: string;
-      marketSnapshotId: string | null;
-      outcome: string | null;
-      price: { toString(): string } | string;
-      side: "BUY" | "SELL";
-      size: { toString(): string } | string;
-      userId: string;
-    },
-    clobOrderId: string,
-    raw: Record<string, unknown>,
-    executedAt: Date
-  ) {
-    const price = order.price.toString();
-    const size = order.size.toString();
-
-    await this.prisma.trade.create({
-      data: {
-        clobTradeId: `${clobOrderId}:fill`,
-        executedAt,
-        marketSnapshotId: order.marketSnapshotId,
-        orderId: order.id,
-        price,
-        raw: this.inputJsonObject(raw),
-        side: order.side,
-        size,
-        userId: order.userId
-      }
-    });
-
-    if (!order.marketSnapshotId || !order.outcome) {
-      return;
-    }
-
-    await this.prisma.position.upsert({
-      create: {
-        averagePrice: price,
-        marketSnapshotId: order.marketSnapshotId,
-        outcome: order.outcome,
-        size,
-        userId: order.userId
-      },
-      update: {
-        averagePrice: price,
-        size: {
-          increment: size
-        }
-      },
-      where: {
-        userId_marketSnapshotId_outcome: {
-          marketSnapshotId: order.marketSnapshotId,
-          outcome: order.outcome,
-          userId: order.userId
-        }
-      }
-    });
-  }
-
   private sanitizePayload(value: unknown): Prisma.InputJsonObject {
     const sanitized = this.sanitizeValue(value);
 
@@ -483,40 +375,13 @@ export class OrdersService {
     );
   }
 
-  private orderSelect() {
-    return {
-      clobOrderId: true,
-      createdAt: true,
-      failureReason: true,
-      id: true,
-      marketSnapshot: {
-        select: {
-          marketId: true,
-          question: true
-        }
-      },
-      outcome: true,
-      price: true,
-      size: true,
-      status: true,
-      submittedAt: true,
-      updatedAt: true
-    } as const;
+  private orderRouterMode(): "preview" | "paper" | "live" {
+    const value = this.config.get<string>("ORDER_ROUTER_MODE", "preview");
+
+    return value === "paper" || value === "live" ? value : "preview";
   }
 
-  private toOrderItem(order: {
-    clobOrderId: string | null;
-    createdAt: Date;
-    failureReason: string | null;
-    id: string;
-    marketSnapshot?: { marketId: string; question: string } | null;
-    outcome: string | null;
-    price: { toString(): string } | string;
-    size: { toString(): string } | string;
-    status: string;
-    submittedAt: Date | null;
-    updatedAt: Date;
-  }) {
+  private toOrderItem(order: OrderItemRecord) {
     return {
       clobOrderId: order.clobOrderId,
       createdAt: order.createdAt,

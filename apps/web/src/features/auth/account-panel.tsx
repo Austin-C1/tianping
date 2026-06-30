@@ -5,7 +5,12 @@ import { readActivity, type ActivityItem } from "../activity/activity-store";
 import { useLanguage } from "../i18n/language-provider";
 import { localizeOutcome } from "../markets/market-localization";
 import { WalletPanel } from "../wallet/wallet-panel";
-import { clearAccessToken, getCurrentUser, readAccessToken, type AuthUser } from "./auth-client";
+import {
+  hasStoredSession,
+  loadAuthenticatedUser,
+  signOut,
+  type AuthUser
+} from "./auth-actions";
 
 type AccountState =
   | { status: "loading" }
@@ -23,12 +28,12 @@ export function AccountPanel() {
   useEffect(() => {
     setLatestOrderPreview(readActivity().find((item) => item.type === "order.previewed") ?? null);
 
-    if (!readAccessToken()) {
+    if (!hasStoredSession()) {
       setState({ status: "anonymous" });
       return;
     }
 
-    getCurrentUser()
+    loadAuthenticatedUser()
       .then((user) => setState({ status: "authenticated", user }))
       .catch(() => setState({ status: "error" }));
   }, []);
@@ -76,7 +81,7 @@ export function AccountPanel() {
       <button
         type="button"
         onClick={() => {
-          clearAccessToken();
+          signOut();
           setState({ status: "anonymous" });
         }}
       >

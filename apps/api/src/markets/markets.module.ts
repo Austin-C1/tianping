@@ -1,13 +1,13 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
+import { MarketProviderModule } from "../infrastructure/market-providers/market-provider.module";
 import { PrismaModule } from "../prisma/prisma.module";
 import { MarketsController } from "./markets.controller";
 import { MarketsService } from "./markets.service";
-import { PolymarketClient } from "./polymarket.client";
 
 @Module({
-  imports: [AuthModule, PrismaModule],
+  imports: [AuthModule, MarketProviderModule, PrismaModule],
   controllers: [MarketsController],
-  providers: [MarketsService, PolymarketClient]
+  providers: [MarketsService]
 })
 export class MarketsModule {}

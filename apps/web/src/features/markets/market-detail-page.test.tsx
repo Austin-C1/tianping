@@ -78,8 +78,16 @@ describe("MarketDetailPage", () => {
     });
     submitOrderMock.mockResolvedValue({
       clobOrderId: "paper_order_1",
+      createdAt: "2026-06-30T00:00:00.000Z",
+      failureReason: null,
       id: "order_1",
-      status: "SUBMITTED"
+      market: { marketId: "market_1", question: "Spread: Colombia (-5.5)" },
+      outcome: "Colombia",
+      price: "0.25",
+      size: "40",
+      status: "SUBMITTED",
+      submittedAt: "2026-06-30T00:01:00.000Z",
+      updatedAt: "2026-06-30T00:01:00.000Z"
     });
   });
 

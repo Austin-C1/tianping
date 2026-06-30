@@ -1,5 +1,12 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { Inject, Injectable } from "@nestjs/common";
+import {
+  DEPOSIT_WALLETS_REPOSITORY,
+  WALLETS_REPOSITORY
+} from "../infrastructure/repositories/repository.tokens";
+import type {
+  DepositWalletsRepository,
+  WalletsRepository
+} from "../infrastructure/repositories/repository.types";
 import {
   WalletFundingService,
   type WalletFundingOptions,
@@ -63,7 +70,10 @@ export interface WalletReadiness {
 @Injectable()
 export class WalletReadinessService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(WALLETS_REPOSITORY)
+    private readonly walletsRepository: WalletsRepository,
+    @Inject(DEPOSIT_WALLETS_REPOSITORY)
+    private readonly depositWalletsRepository: DepositWalletsRepository,
     private readonly walletFundingService: WalletFundingService
   ) {}
 
@@ -73,7 +83,7 @@ export class WalletReadinessService {
   ): Promise<WalletReadiness> {
     const [eoaWallet, productionDepositWallet, funding] = await Promise.all([
       this.findWallet(operator.userId, "EOA"),
-      this.findDepositWallet(operator.userId),
+      this.depositWalletsRepository.findLatestDepositWallet(operator.userId),
       this.walletFundingService.getFunding(operator, fundingOptions)
     ]);
     const legacyDepositWallet = productionDepositWallet
@@ -130,18 +140,9 @@ export class WalletReadinessService {
   }
 
   private findWallet(userId: string, type: "EOA" | "DEPOSIT"): Promise<WalletRecord | null> {
-    return this.prisma.wallet.findFirst({
-      orderBy: { updatedAt: "desc" },
-      select: { address: true, chainId: true },
-      where: { type, userId }
-    });
-  }
-
-  private findDepositWallet(userId: string): Promise<DepositWalletRecord | null> {
-    return this.db.depositWallet.findFirst({
-      orderBy: { updatedAt: "desc" },
-      select: { address: true, chainId: true, status: true },
-      where: { userId }
+    return this.walletsRepository.findLatestWallet({
+      type,
+      userId
     });
   }
 
@@ -184,15 +185,4 @@ export class WalletReadinessService {
     return "Deposit Wallet is not created";
   }
 
-  private get db(): PrismaService & {
-    depositWallet: {
-      findFirst(args: object): Promise<DepositWalletRecord | null>;
-    };
-  } {
-    return this.prisma as PrismaService & {
-      depositWallet: {
-        findFirst(args: object): Promise<DepositWalletRecord | null>;
-      };
-    };
-  }
 }
