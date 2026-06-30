@@ -80,6 +80,11 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
+    "moduleNameMapper": {
+      "^@pmx/contracts$": "<rootDir>/../../../libs/contracts/src/index.ts",
+      "^@pmx/domain$": "<rootDir>/../../../libs/domain/src/index.ts",
+      "^@pmx/shared$": "<rootDir>/../../../packages/shared/src/index.ts"
+    },
     "testEnvironment": "node"
   }
 }

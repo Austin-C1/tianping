@@ -2,11 +2,11 @@ import { ConflictException, Inject, Injectable, UnauthorizedException } from "@n
 import { AUDIT_LOGS_REPOSITORY } from "../infrastructure/repositories/repository.tokens";
 import type { AuditLogsRepository } from "../infrastructure/repositories/repository.types";
 import { PrismaService } from "../prisma/prisma.service";
+import type { AuthResult, AuthUser } from "./auth.types";
 import type { LoginDto } from "./dto/login.dto";
 import type { RegisterDto } from "./dto/register.dto";
 import { PasswordService } from "./password.service";
 import { TokenService } from "./token.service";
-import type { AuthResult, AuthUser } from "./auth.types";
 
 @Injectable()
 export class AuthService {

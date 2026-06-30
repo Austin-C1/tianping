@@ -76,9 +76,82 @@ export interface CreatePreviewOrderInput {
   userId: string;
 }
 
+export interface OrderVisibilityInput {
+  orderId: string;
+  role?: "USER" | "ADMIN";
+  userId: string;
+}
+
+export interface SigningIntentOrderRecord {
+  id: string;
+  rawPreview: Prisma.JsonValue | null;
+  status: string;
+}
+
+export interface SignedPayloadOrderRecord {
+  id: string;
+  rawSignedOrder: Prisma.JsonValue | null;
+  status: string;
+}
+
+export interface PaperSubmitOrderRecord {
+  id: string;
+  marketSnapshotId: string | null;
+  outcome: string | null;
+  price: DecimalLike;
+  rawSignedOrder: Prisma.JsonValue | null;
+  side: "BUY" | "SELL";
+  size: DecimalLike;
+  status: string;
+  userId: string;
+}
+
+export interface OrderItemRecord {
+  clobOrderId: string | null;
+  createdAt: Date;
+  failureReason: string | null;
+  id: string;
+  marketSnapshot?: { marketId: string; question: string } | null;
+  outcome: string | null;
+  price: DecimalLike;
+  size: DecimalLike;
+  status: string;
+  submittedAt: Date | null;
+  updatedAt: Date;
+}
+
+export interface SaveSignedOrderInput {
+  orderId: string;
+  signedPayload: Prisma.InputJsonObject;
+}
+
+export interface MarkOrderSubmittedInput {
+  clobOrderId: string;
+  clobStatus: string;
+  orderId: string;
+  raw: Record<string, unknown>;
+  submittedAt: Date;
+}
+
+export interface CreatePaperFillInput {
+  clobOrderId: string;
+  executedAt: Date;
+  order: PaperSubmitOrderRecord;
+  raw: Record<string, unknown>;
+}
+
 export interface OrdersRepository {
+  createPaperFill(input: CreatePaperFillInput): Promise<void>;
   createPreviewOrder(input: CreatePreviewOrderInput): Promise<{ id: string }>;
+  findOrderById(input: OrderVisibilityInput): Promise<OrderItemRecord | null>;
+  findOrderForSignedPayload(input: OrderVisibilityInput): Promise<{ id: string; status: string } | null>;
+  findOrderForSigningIntent(input: OrderVisibilityInput): Promise<SigningIntentOrderRecord | null>;
+  findOrderForSubmit(input: OrderVisibilityInput): Promise<PaperSubmitOrderRecord | null>;
   findPreviewMarket(marketId: string): Promise<OrderPreviewMarketRecord | null>;
+  listOrders(operator: { role?: "USER" | "ADMIN"; userId: string }): Promise<OrderItemRecord[]>;
+  markOrderSubmitted(input: MarkOrderSubmittedInput): Promise<OrderItemRecord>;
+  markSigningRequested(orderId: string): Promise<SigningIntentOrderRecord>;
+  saveSignedOrder(input: SaveSignedOrderInput): Promise<SignedPayloadOrderRecord>;
 }
 
 export interface DepositWalletRecord {

@@ -1,5 +1,17 @@
-import { previewTradeOrder } from "../features/trading/trading-actions";
-import type { PreviewOrderResponse } from "../features/trading/order-preview-client";
+import {
+  createTradeSigningIntent,
+  previewTradeOrder,
+  saveTradeSignedOrder,
+  submitTradeOrder
+} from "../features/trading/trading-actions";
+import type {
+  ManagedOrder,
+  OrderIdInput,
+  PreviewOrderResponse,
+  SaveSignedOrderInput,
+  SignedOrderResponse,
+  SigningIntentResponse
+} from "../features/trading/trading-actions";
 import type { MarketListItem } from "../features/markets/markets-client";
 
 export interface PreviewOrderForMarketInput {
@@ -18,4 +30,16 @@ export async function previewOrderForMarket(
     orderType: input.orderType,
     outcomeIndex: input.outcomeIndex
   });
+}
+
+export function createPaperSigningIntent(input: OrderIdInput): Promise<SigningIntentResponse> {
+  return createTradeSigningIntent(input);
+}
+
+export function savePaperSignedOrder(input: SaveSignedOrderInput): Promise<SignedOrderResponse> {
+  return saveTradeSignedOrder(input);
+}
+
+export function submitPaperOrder(input: OrderIdInput): Promise<ManagedOrder> {
+  return submitTradeOrder(input);
 }

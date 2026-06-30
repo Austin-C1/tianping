@@ -183,8 +183,108 @@ a {
   font-size: 12px;
 }
 
+.order-market-cell {
+  display: grid;
+  gap: 4px;
+}
+
+.order-market-cell strong {
+  color: #101828;
+  font-weight: 600;
+}
+
+.order-market-cell small {
+  color: #667085;
+}
+
+.audit-user-cell {
+  display: grid;
+  gap: 3px;
+}
+
+.audit-user-cell small {
+  color: #667085;
+}
+
+.metadata-cell {
+  display: block;
+  max-width: 520px;
+  overflow: hidden;
+  color: #344054;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.risk-gate-cell {
+  display: grid;
+  gap: 4px;
+}
+
+.risk-gate-cell strong {
+  color: #101828;
+  font-weight: 600;
+}
+
+.risk-gate-cell small,
+.risk-evidence {
+  color: #667085;
+}
+
+.risk-evidence {
+  display: block;
+  max-width: 560px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.approval-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 18px;
+  align-items: start;
+}
+
+.approval-main,
+.approval-actions {
+  display: grid;
+  gap: 14px;
+}
+
+.approval-status-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #475467;
+}
+
+.approval-detail-grid {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 10px 14px;
+}
+
+.approval-detail-grid span,
+.approval-actions small {
+  color: #667085;
+}
+
+.approval-detail-grid strong {
+  min-width: 0;
+  color: #101828;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.approval-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 @media (max-width: 900px) {
   .metric-grid,
+  .approval-panel,
   .login-panel {
     grid-template-columns: 1fr;
   }

@@ -7,11 +7,18 @@ import { calculateOrderPreview, parseOrderAmount, type OrderPreview } from "./or
 export type OrderSide = "yes" | "no";
 
 interface OrderTicketBaseProps {
+  canSubmitPaper?: boolean;
+  isPaperSubmitting?: boolean;
   locale: Locale;
   marketTitle: string;
   outcomes: string[];
   prices: number[];
+  onPaperSubmit?: () => void;
   onPreviewChange?: (preview: OrderTicketPreview) => void;
+  paperStatus?: {
+    detail?: string;
+    label: string;
+  };
   readinessGates?: OrderReadinessGate[];
 }
 
@@ -49,6 +56,8 @@ const copy = {
     notSubmittable: "不可提交",
     orderTicket: "订单票据",
     outcome: "结果",
+    paperSubmit: "提交 paper 订单",
+    paperTitle: "Paper 订单",
     price: "价格",
     quantity: "数量",
     risk:
@@ -67,6 +76,8 @@ const copy = {
     notSubmittable: "Not submittable",
     orderTicket: "Order ticket",
     outcome: "Outcome",
+    paperSubmit: "Submit paper order",
+    paperTitle: "Paper order",
     price: "Price",
     quantity: "Quantity",
     risk:
@@ -80,10 +91,14 @@ const copy = {
 const quickAmounts = [1, 5, 10, 25, 50] as const;
 
 export function OrderTicket({
+  canSubmitPaper = false,
+  isPaperSubmitting = false,
   locale,
   marketTitle,
+  onPaperSubmit,
   outcomes,
   prices,
+  paperStatus,
   initialSide = "yes",
   selectedSide,
   onSideChange,
@@ -225,6 +240,23 @@ export function OrderTicket({
               </li>
             ))}
           </ul>
+        </section>
+      ) : null}
+      {onPaperSubmit ? (
+        <section className="readiness-card">
+          <div className="section-heading">
+            <h2>{text.paperTitle}</h2>
+            <span>{paperStatus?.label ?? text.notSubmittable}</span>
+          </div>
+          {paperStatus?.detail ? <p>{paperStatus.detail}</p> : null}
+          <button
+            className="gate-button"
+            disabled={!canSubmitPaper || isPaperSubmitting}
+            type="button"
+            onClick={onPaperSubmit}
+          >
+            {text.paperSubmit}
+          </button>
         </section>
       ) : null}
       <button className="gate-button" type="button" disabled>

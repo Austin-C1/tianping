@@ -19,7 +19,9 @@ enum OrderSide {
 
 enum OrderStatus {
   PREVIEWED
+  SIGNING_REQUESTED
   SIGNED
+  SUBMITTING
   SUBMITTED
   OPEN
   PARTIALLY_FILLED
@@ -47,6 +49,8 @@ model User {
   trades               Trade[]
   positions            Position[]
   auditLogs            AuditLog[]
+  liveTradingApprovalsApproved LiveTradingApproval[] @relation("LiveTradingApprovalApprovedBy")
+  liveTradingApprovalsRevoked  LiveTradingApproval[] @relation("LiveTradingApprovalRevokedBy")
   rateLimitEvents      RateLimitEvent[]
   walletChallenges     WalletChallenge[]
   depositWallets       DepositWallet[]
@@ -277,6 +281,26 @@ model AuditLog {
 
   @@index([userId, createdAt])
   @@index([action, createdAt])
+}
+
+model LiveTradingApproval {
+  id             String    @id @default(cuid())
+  status         String
+  approvalReason String
+  approvedById   String?
+  approvedAt     DateTime  @default(now())
+  revokeReason   String?
+  revokedById    String?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  approvedBy     User?     @relation("LiveTradingApprovalApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  revokedBy      User?     @relation("LiveTradingApprovalRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  @@index([status, approvedAt])
+  @@index([approvedById, approvedAt])
+  @@index([revokedById, revokedAt])
+  @@index([revokedAt, approvedAt])
 }
 
 model RateLimitEvent {

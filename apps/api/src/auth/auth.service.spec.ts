@@ -17,7 +17,7 @@ describe("AuthService", () => {
   });
 
   const createAuditLogsRepository = () => ({
-    create: jest.fn()
+    create: jest.fn().mockResolvedValue(undefined)
   });
 
   const createService = (
@@ -66,7 +66,7 @@ describe("AuthService", () => {
     });
   });
 
-  it("rejects duplicate registrations", async () => {
+  it("rejects duplicate registrations without writing audit logs", async () => {
     const prisma = createPrisma();
     const auditLogsRepository = createAuditLogsRepository();
     prisma.user.findUnique.mockResolvedValue({
@@ -81,6 +81,7 @@ describe("AuthService", () => {
         password: "long-enough-password"
       })
     ).rejects.toBeInstanceOf(ConflictException);
+    expect(auditLogsRepository.create).not.toHaveBeenCalled();
   });
 
   it("logs in an existing user with a valid password", async () => {
@@ -112,7 +113,7 @@ describe("AuthService", () => {
     });
   });
 
-  it("rejects login with an invalid password", async () => {
+  it("rejects login with an invalid password without writing audit logs", async () => {
     const prisma = createPrisma();
     const auditLogsRepository = createAuditLogsRepository();
     const passwordHash = await passwordService.hash("long-enough-password");
@@ -129,6 +130,7 @@ describe("AuthService", () => {
         password: "wrong-password"
       })
     ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(auditLogsRepository.create).not.toHaveBeenCalled();
   });
 
   it("returns the current user with role", async () => {

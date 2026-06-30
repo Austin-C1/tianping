@@ -4,10 +4,11 @@ import { RepositoriesModule } from "../infrastructure/repositories/repositories.
 import { WalletsModule } from "../wallets/wallets.module";
 import { OrdersController } from "./orders.controller";
 import { OrdersService } from "./orders.service";
+import { PaperOrderProvider } from "./paper-order-provider";
 
 @Module({
   imports: [AuthModule, RepositoriesModule, WalletsModule],
   controllers: [OrdersController],
-  providers: [OrdersService]
+  providers: [OrdersService, PaperOrderProvider]
 })
 export class OrdersModule {}

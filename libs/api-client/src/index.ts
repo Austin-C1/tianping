@@ -14,6 +14,8 @@ export type ManagedUser = components["schemas"]["ManagedUserDto"];
 export type PreviewOrderInput = components["schemas"]["PreviewOrderDto"];
 export type PreviewOrderResponse =
   components["schemas"]["PreviewOrderResponseDto"];
+export type AdminGateStatus = AdminGate["status"];
+export type OrderRouterMode = OrderRouterEnvironment["mode"];
 export type WalletFundingState = components["schemas"]["WalletFundingStateDto"];
 export type WalletReadiness = components["schemas"]["WalletReadinessDto"];
 export type DepositWalletStatus =
@@ -30,6 +32,141 @@ export type WalletChallenge = components["schemas"]["WalletChallengeDto"];
 export type VerifyWalletInput = components["schemas"]["VerifyWalletDto"];
 export type VerifyWalletResult =
   components["schemas"]["VerifyWalletResultDto"];
+
+export interface OrderIdInput {
+  orderId: string;
+}
+
+export interface SigningIntentResponse {
+  id: string;
+  signingPayload: Record<string, unknown>;
+  status: "SIGNING_REQUESTED";
+}
+
+export interface SaveSignedOrderInput extends OrderIdInput {
+  signedPayload: Record<string, unknown>;
+}
+
+export interface SignedOrderResponse {
+  id: string;
+  signedPayload: Record<string, unknown>;
+  status: "SIGNED";
+}
+
+export interface ManagedOrder {
+  clobOrderId: string | null;
+  createdAt: string;
+  failureReason: string | null;
+  id: string;
+  market: {
+    marketId: string;
+    question: string;
+  } | null;
+  outcome: string | null;
+  price: string;
+  size: string;
+  status: string;
+  submittedAt: string | null;
+  updatedAt: string;
+}
+
+export interface PortfolioMarket {
+  marketId: string;
+  question: string;
+}
+
+export interface PortfolioPosition {
+  averagePrice: string;
+  id: string;
+  market: PortfolioMarket | null;
+  outcome: string;
+  size: string;
+  updatedAt: string;
+}
+
+export interface PortfolioTrade {
+  clobTradeId: string | null;
+  executedAt: string;
+  id: string;
+  market: PortfolioMarket | null;
+  orderId: string | null;
+  price: string;
+  side: "BUY" | "SELL";
+  size: string;
+}
+
+export interface PortfolioSummary {
+  positionCount: number;
+  tradeCount: number;
+}
+
+export interface PortfolioResponse {
+  positions: PortfolioPosition[];
+  summary: PortfolioSummary;
+  trades: PortfolioTrade[];
+}
+
+export interface ManagedAuditLog {
+  id: string;
+  action: string;
+  userId: string | null;
+  userEmail: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  metadata: unknown | null;
+  createdAt: string;
+}
+
+export type RiskGateCategory = "environment" | "market" | "wallet" | "compliance" | "risk";
+export type RiskGateSeverity = "INFO" | "WARNING" | "CRITICAL";
+
+export interface RiskGate {
+  key: string;
+  title: string;
+  category: RiskGateCategory;
+  status: AdminGateStatus;
+  severity: RiskGateSeverity;
+  blocking: boolean;
+  description: string;
+  evidence: string;
+  updatedAt: string | null;
+}
+
+export interface RiskGateReport {
+  generatedAt: string;
+  mode: OrderRouterMode;
+  liveTradingEnabled: boolean;
+  canSubmitLiveOrders: boolean;
+  blockingCount: number;
+  warningCount: number;
+  gates: RiskGate[];
+}
+
+export type LiveApprovalStatusValue = "APPROVED" | "NOT_APPROVED";
+export type LiveApprovalRecordStatus = "APPROVED" | "REVOKED";
+
+export interface LiveApprovalRecord {
+  id: string;
+  status: LiveApprovalRecordStatus;
+  approvalReason: string;
+  approvedById: string | null;
+  approvedByEmail: string | null;
+  approvedAt: string;
+  revokeReason: string | null;
+  revokedById: string | null;
+  revokedByEmail: string | null;
+  revokedAt: string | null;
+}
+
+export interface LiveApprovalStatus {
+  status: LiveApprovalStatusValue;
+  latestApproval: LiveApprovalRecord | null;
+  safetyNotice: string;
+}
+
+export interface LiveApprovalReason {
+  reason: string;
+}
 
 export interface CreateApiClientOptions {
   baseUrl?: string;
@@ -54,6 +191,17 @@ export function createApiClient(options: CreateApiClientOptions = {}) {
 
   return {
     admin: {
+      approveLiveTrading: (body: LiveApprovalReason) =>
+        request<LiveApprovalStatus, LiveApprovalReason>(
+          "POST",
+          "/admin/live-approval/approve",
+          body,
+          { authenticated: true }
+        ),
+      getAuditLogs: () =>
+        request<ManagedAuditLog[]>("GET", "/admin/audit", undefined, {
+          authenticated: true
+        }),
       getEnvironment: () =>
         request<OrderRouterEnvironment>("GET", "/admin/environment", undefined, {
           authenticated: true
@@ -66,10 +214,25 @@ export function createApiClient(options: CreateApiClientOptions = {}) {
         request<AdminSummary>("GET", "/admin/summary", undefined, {
           authenticated: true
         }),
+      getLiveApproval: () =>
+        request<LiveApprovalStatus>("GET", "/admin/live-approval", undefined, {
+          authenticated: true
+        }),
+      getRiskGateReport: () =>
+        request<RiskGateReport>("GET", "/admin/risk/gates", undefined, {
+          authenticated: true
+        }),
       listUsers: () =>
         request<ManagedUser[]>("GET", "/admin/users", undefined, {
           authenticated: true
-        })
+        }),
+      revokeLiveTrading: (body: LiveApprovalReason) =>
+        request<LiveApprovalStatus, LiveApprovalReason>(
+          "POST",
+          "/admin/live-approval/revoke",
+          body,
+          { authenticated: true }
+        )
     },
     auth: {
       getCurrentUser: () =>
@@ -92,13 +255,41 @@ export function createApiClient(options: CreateApiClientOptions = {}) {
         )
     },
     orders: {
+      createSigningIntent: (body: OrderIdInput) =>
+        request<SigningIntentResponse, OrderIdInput>(
+          "POST",
+          "/orders/signing-intent",
+          body,
+          { authenticated: true }
+        ),
+      list: () =>
+        request<ManagedOrder[]>("GET", "/orders", undefined, {
+          authenticated: true
+        }),
       preview: (body: PreviewOrderInput) =>
         request<PreviewOrderResponse, PreviewOrderInput>(
           "POST",
           "/orders/preview",
           body,
           { authenticated: true }
-        )
+        ),
+      saveSignedOrder: (body: SaveSignedOrderInput) =>
+        request<SignedOrderResponse, SaveSignedOrderInput>(
+          "POST",
+          "/orders/signed",
+          body,
+          { authenticated: true }
+        ),
+      submit: (body: OrderIdInput) =>
+        request<ManagedOrder, OrderIdInput>("POST", "/orders/submit", body, {
+          authenticated: true
+        })
+    },
+    portfolio: {
+      get: () =>
+        request<PortfolioResponse>("GET", "/portfolio", undefined, {
+          authenticated: true
+        })
     },
     wallets: {
       createDepositWalletIntent: (body: CreateDepositWalletIntentInput) =>

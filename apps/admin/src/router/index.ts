@@ -1,9 +1,12 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import AuditView from '@/views/AuditView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import LoginView from '@/views/LoginView.vue'
+import OrdersView from '@/views/OrdersView.vue'
 import PlaceholderView from '@/views/PlaceholderView.vue'
+import RiskView from '@/views/RiskView.vue'
 import UsersView from '@/views/UsersView.vue'
 
 const routes: RouteRecordRaw[] = [
@@ -43,29 +46,20 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'orders',
         name: 'Orders',
-        component: PlaceholderView,
-        meta: {
-          title: '订单',
-          description: '订单预览、CLOB 状态和失败排查会在这里显示。'
-        }
+        component: OrdersView,
+        meta: { title: '订单' }
       },
       {
         path: 'audit',
         name: 'Audit',
-        component: PlaceholderView,
-        meta: {
-          title: '审计',
-          description: '真实交易开放前，关键认证、钱包和订单动作都会留痕。'
-        }
+        component: AuditView,
+        meta: { title: '审计' }
       },
       {
         path: 'risk',
         name: 'Risk',
-        component: PlaceholderView,
-        meta: {
-          title: '风险',
-          description: '人工关口、地区限制和限流事件会在这里审核。'
-        }
+        component: RiskView,
+        meta: { title: '风险' }
       },
       {
         path: 'settings',

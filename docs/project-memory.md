@@ -1,39 +1,137 @@
-# 项目记忆
+# PMX Project Memory
 
-## 项目状态
+## Project Goal
 
-- 当前主线以 `main` / `origin/main` 为准，不继续使用旧功能分支。
-- V2 Web Business Flow Layer 已完成。
-- API repository boundaries 已完成。
-- Full OpenAPI-generated `libs/api-client` 已完成。
-- Nx workspace migration 已完成。
-- Contracts migration 已完成。
-- Domain migration 已完成。
-- 当前模块：等待下一阶段规划。
+PMX is a non-custodial Polymarket trading workspace. The current product direction is a verifiable trading-preparation chain: auth, market browsing, wallet proof, Deposit Wallet readiness, funding readiness, order preview, signed payload capture, paper submit, then guarded live CLOB only after explicit future approval and implementation.
 
-## 已验证的运行方式
+Real CLOB submit is still not implemented and must stay disabled.
 
-- 生成 Prisma Client：`npm run prisma:generate`
-- 生成 OpenAPI 与 api-client schema：`npm run generate --workspace @pmx/api-client`
-- API OpenAPI 文档单测：`npm run test --workspace @pmx/api -- openapi-document.spec.ts`
-- api-client 单测：`npm run test --workspace @pmx/api-client`
-- Web flow 边界测试：`npm run test:flow --workspace @pmx/web -- ui-client-boundary.test.ts`
-- Admin API 边界测试：`npm run test --workspace @pmx/admin -- api-client-boundary.test.ts`
-- Nx 项目识别：`npx nx show projects`
-- Nx build targets：`npx nx run web:build`、`npx nx run admin:build`、`npx nx run api:build`
-- Nx OpenAPI/client targets：`npx nx run api:openapi`、`npx nx run api-client:generate`、`npx nx run api-client:typecheck`
-- Nx affected 验证：`npx nx affected -t build test`
-- Contracts build/test：`npm run build --workspace @pmx/contracts`、`npm run test --workspace @pmx/contracts`
-- Domain build/test：`npm run build --workspace @pmx/domain`、`npm run test --workspace @pmx/domain`
+## Current Baseline
 
-## 开发边界
+- Web, Admin, API, PostgreSQL, and Redis run locally.
+- Useful local URLs:
+  - Web: `http://127.0.0.1:3000`
+  - Admin: `http://127.0.0.1:3001/#/login`
+  - API health: `http://127.0.0.1:4000/health`
+- Default local admin:
+  - Email: `admin@pmx.local`
+  - Password: `change-me-123`
+- `origin/main` now includes:
+  - Nx workspace targets and project metadata.
+  - `libs/contracts` for shared contracts, with `@pmx/shared` kept as compatibility forwarding.
+  - `libs/domain` for pure order-domain logic.
+  - `libs/api-client` for generated/typed HTTP access.
+  - API repository boundaries under `apps/api/src/infrastructure/repositories`.
+  - Web actions and flow boundaries under `apps/web/src/flows` and feature `*-actions.ts`.
+- The 2026-06-30 conflict resolution keeps those `origin/main` boundaries and integrates the paper order loop, audit/risk, funding gate, and manual live approval work into them.
 
-- `libs/api-client` 只负责 OpenAPI 生成类型、HTTP 调用封装、base URL 和 Bearer header 处理。
-- Web module actions 和 flows 仍是业务流程边界；不要把业务编排放进 api-client。
-- Nx workspace migration 只引入 Nx tooling、project metadata、target mapping 和 affected/graph 能力。
-- Nx workspace migration 不迁移 `packages/shared` 到 `libs/contracts` 或 `libs/domain`。
-- Nx workspace migration 不移动 app/lib 目录，不改数据库 schema，不改业务行为。
-- Contracts migration 只迁移跨模块共享契约；`@pmx/shared` 暂时保留为兼容转发层。
-- Contracts migration 不创建或迁移 `libs/domain`，不改 OpenAPI/api-client 生成链路，不改业务行为。
-- Domain migration 只迁移纯领域逻辑；当前先迁移订单 CLOB draft 构建逻辑。
-- Domain migration 不接收 Nest、Prisma、repository、OpenAPI DTO 或 Web UI 组件。
+## Development Rules
+
+- Develop one module at a time.
+- Each module keeps its own memory document under `docs/modules/`.
+- Cross-module status is summarized in `docs/module-index.md`.
+- Module memory records stable facts, boundaries, interfaces, verification commands, and current state.
+- Do not mix temporary chat notes into project memory.
+- Do not enable real CLOB submit without explicit future module scope and user confirmation.
+- Do not store user private keys, mnemonics, signing secrets, or raw secret-like payload keys.
+
+## Active Module State
+
+Current completed module: `manual-live-approval`.
+
+Recent completed modules:
+
+- `orders-paper-loop`
+- `paper-portfolio`
+- `audit-log`
+- `risk-gates`
+- `wallet-funding-readiness`
+- `manual-live-approval`
+- `api-client`
+- `api-repositories`
+- `v2-web-business-flow-layer`
+- `contracts`
+- `domain`
+- `nx-workspace`
+
+## Stable Implementation Facts
+
+- Orders preview creates a CLOB V2 draft and persists a `PREVIEWED` order. Submit remains disabled in preview output.
+- Paper order lifecycle is:
+
+```text
+PREVIEWED -> SIGNING_REQUESTED -> SIGNED -> SUBMITTED
+```
+
+- `ORDER_ROUTER_MODE=preview` blocks submit.
+- `ORDER_ROUTER_MODE=paper` can call the local paper provider and creates local paper order IDs.
+- `ORDER_ROUTER_MODE=live` still rejects submit because live CLOB submit is not implemented in this module.
+- Paper submit writes a `Trade` row and upserts a `Position` row.
+- Portfolio reads only existing paper trade/position data.
+- Auth register/login, order preview/signing/signed/submit, portfolio reads, and live approval mutations write audit records.
+- Audit metadata removes private-key, mnemonic, seed, and secret-style fields before persistence.
+- Admin audit is read-only.
+- Admin risk gates aggregate Order Router mode, market sync, quote sync, wallet binding, Deposit Wallet readiness, funding readiness, audit trail, rate-limit events, and manual live approval.
+- Funding readiness uses existing cached `DepositWallet` fields: `pUsdBalance`, `exchangeAllowance`, and `balanceAllowanceUpdatedAt`.
+- Manual live approval stores Admin approval/revoke state, reasons, operators, and timestamps in `LiveTradingApproval`.
+- Manual live approval writes `live_approval.approved` and `live_approval.revoked` audit actions.
+- Manual live approval changes the `manual-live-approval` risk gate only. It does not enable real CLOB submit, change order submit behavior, or move user funds.
+- Web/Admin low-level API access should go through `@pmx/api-client`.
+- Web UI components should call actions/flows rather than feature `*-client` modules directly.
+- API services should prefer repository interfaces under `apps/api/src/infrastructure/repositories` instead of direct Prisma access when a repository contract exists.
+
+## Verified Commands
+
+Common local setup and verification commands:
+
+```bash
+docker compose up -d
+npm run prisma:generate
+npm run db:migrate
+npm run db:seed
+npm test
+npm run build
+npm run lint
+npm run test:e2e
+```
+
+Useful targeted verification:
+
+```bash
+npm test --workspace @pmx/api -- auth
+npm test --workspace @pmx/api -- orders
+npm test --workspace @pmx/api -- admin
+npm test --workspace @pmx/api -- openapi-document.spec.ts
+npm test --workspace @pmx/web -- order
+npm run test:flow --workspace @pmx/web -- ui-client-boundary.test.ts
+npm run test --workspace @pmx/admin -- api-client-boundary.test.ts
+npm run build --workspace @pmx/admin
+npm run test --workspace @pmx/api-client
+```
+
+Before the PR conflict resolution on 2026-06-30, the manual live approval implementation passed:
+
+```bash
+npm run db:migrate
+npm run prisma:generate
+npm test
+npm run build
+npm run lint
+npm run test:e2e
+```
+
+After merging `origin/main` into the feature branch on 2026-06-30, conflict resolution verification passed:
+
+```bash
+npm run generate --workspace @pmx/api-client
+npm test
+npm run build
+npm run lint
+npm run test:e2e
+```
+
+## Dependency Audit Notes
+
+On 2026-06-30, `npm audit fix` safely updated lockfile-only dependency versions for `@nestjs/swagger`, nested `js-yaml`, `swagger-ui-dist`, and `viem`.
+
+`npm audit` still reports upstream dependency-chain risks after the safe fix. The main remaining sources are Polymarket SDK chains (`axios`, `ethers@5`, `viem`, `ws`), Nest `multer`, Next `postcss`, and Vite `esbuild`. Do not run `npm audit fix --force` without a dedicated dependency-upgrade module because npm proposes breaking downgrades such as Nest `7.5.5` and Next `9.3.3`, and Polymarket SDK replacement needs contract review.
