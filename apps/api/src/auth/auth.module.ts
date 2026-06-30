@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ComplianceModule } from "../compliance/compliance.module";
 import { PrismaModule } from "../prisma/prisma.module";
 import { AuthController } from "./auth.controller";
 import { AuthGuard } from "./auth.guard";
@@ -7,7 +8,7 @@ import { PasswordService } from "./password.service";
 import { TokenService } from "./token.service";
 
 @Module({
-  imports: [PrismaModule],
+  imports: [ComplianceModule, PrismaModule],
   controllers: [AuthController],
   providers: [AuthService, AuthGuard, PasswordService, TokenService],
   exports: [AuthService, AuthGuard, TokenService]

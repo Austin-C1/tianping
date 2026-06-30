@@ -13,21 +13,27 @@ describe("AuthService", () => {
     user: {
       findUnique: jest.fn(),
       create: jest.fn()
-    },
-    auditLog: {
-      create: jest.fn()
     }
+  });
+  const createAuditLogService = () => ({
+    record: jest.fn().mockResolvedValue(undefined)
   });
 
   it("registers a new user with normalized email and hashed password", async () => {
     const prisma = createPrisma();
+    const auditLogService = createAuditLogService();
     prisma.user.findUnique.mockResolvedValue(null);
     prisma.user.create.mockResolvedValue({
       id: "user_123",
       email: "person@example.com",
       role: "USER"
     });
-    const service = new AuthService(prisma as never, passwordService, tokenService);
+    const service = new AuthService(
+      prisma as never,
+      passwordService,
+      tokenService,
+      auditLogService as never
+    );
 
     const result = await service.register({
       email: " Person@Example.COM ",
@@ -50,24 +56,28 @@ describe("AuthService", () => {
         role: "USER"
       }
     });
-    expect(prisma.auditLog.create).toHaveBeenCalledWith({
-      data: {
-        userId: "user_123",
-        action: "auth.register",
-        metadata: {
-          email: "person@example.com"
-        }
-      }
+    expect(auditLogService.record).toHaveBeenCalledWith({
+      action: "auth.register",
+      metadata: {
+        email: "person@example.com"
+      },
+      userId: "user_123"
     });
   });
 
-  it("rejects duplicate registrations", async () => {
+  it("rejects duplicate registrations without writing audit logs", async () => {
     const prisma = createPrisma();
+    const auditLogService = createAuditLogService();
     prisma.user.findUnique.mockResolvedValue({
       id: "user_123",
       email: "person@example.com"
     });
-    const service = new AuthService(prisma as never, passwordService, tokenService);
+    const service = new AuthService(
+      prisma as never,
+      passwordService,
+      tokenService,
+      auditLogService as never
+    );
 
     await expect(
       service.register({
@@ -75,10 +85,12 @@ describe("AuthService", () => {
         password: "long-enough-password"
       })
     ).rejects.toBeInstanceOf(ConflictException);
+    expect(auditLogService.record).not.toHaveBeenCalled();
   });
 
   it("logs in an existing user with a valid password", async () => {
     const prisma = createPrisma();
+    const auditLogService = createAuditLogService();
     const passwordHash = await passwordService.hash("long-enough-password");
     prisma.user.findUnique.mockResolvedValue({
       id: "user_123",
@@ -86,7 +98,12 @@ describe("AuthService", () => {
       role: "ADMIN",
       passwordHash
     });
-    const service = new AuthService(prisma as never, passwordService, tokenService);
+    const service = new AuthService(
+      prisma as never,
+      passwordService,
+      tokenService,
+      auditLogService as never
+    );
 
     const result = await service.login({
       email: "person@example.com",
@@ -96,26 +113,30 @@ describe("AuthService", () => {
     expect(result.accessToken).toBe("access-token");
     expect(result.user.email).toBe("person@example.com");
     expect(result.user.role).toBe("ADMIN");
-    expect(prisma.auditLog.create).toHaveBeenCalledWith({
-      data: {
-        userId: "user_123",
-        action: "auth.login",
-        metadata: {
-          email: "person@example.com"
-        }
-      }
+    expect(auditLogService.record).toHaveBeenCalledWith({
+      action: "auth.login",
+      metadata: {
+        email: "person@example.com"
+      },
+      userId: "user_123"
     });
   });
 
-  it("rejects login with an invalid password", async () => {
+  it("rejects login with an invalid password without writing audit logs", async () => {
     const prisma = createPrisma();
+    const auditLogService = createAuditLogService();
     const passwordHash = await passwordService.hash("long-enough-password");
     prisma.user.findUnique.mockResolvedValue({
       id: "user_123",
       email: "person@example.com",
       passwordHash
     });
-    const service = new AuthService(prisma as never, passwordService, tokenService);
+    const service = new AuthService(
+      prisma as never,
+      passwordService,
+      tokenService,
+      auditLogService as never
+    );
 
     await expect(
       service.login({
@@ -123,6 +144,7 @@ describe("AuthService", () => {
         password: "wrong-password"
       })
     ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(auditLogService.record).not.toHaveBeenCalled();
   });
 
   it("returns the current user with role", async () => {

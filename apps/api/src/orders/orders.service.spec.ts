@@ -10,6 +10,15 @@ describe("OrdersService", () => {
       findFirst: jest.fn()
     },
     order: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn()
+    },
+    position: {
+      upsert: jest.fn()
+    },
+    trade: {
       create: jest.fn()
     }
   });
@@ -68,6 +77,20 @@ describe("OrdersService", () => {
     getReadiness: jest.fn().mockResolvedValue(readiness)
   });
 
+  const createPaperOrderProvider = () => ({
+    submit: jest.fn().mockResolvedValue({
+      clobOrderId: "paper_order_1",
+      raw: {
+        mode: "paper",
+        orderId: "order_1"
+      },
+      status: "SUBMITTED"
+    })
+  });
+  const createAuditLogService = () => ({
+    record: jest.fn().mockResolvedValue(undefined)
+  });
+
   it("creates a CLOB V2 preview draft with builder attribution and disabled submission", async () => {
     const prisma = createPrisma();
     prisma.marketSnapshot.findFirst.mockResolvedValue({
@@ -93,10 +116,13 @@ describe("OrdersService", () => {
       ]
     });
     prisma.order.create.mockResolvedValue({ id: "order_1" });
+    const auditLogService = createAuditLogService();
     const service = new OrdersService(
       prisma as never,
       createConfig({ POLYMARKET_BUILDER_CODE: validBuilderCode }),
-      createWalletReadinessService() as never
+      createWalletReadinessService() as never,
+      createPaperOrderProvider() as never,
+      auditLogService as never
     );
 
     await expect(
@@ -168,6 +194,17 @@ describe("OrdersService", () => {
         userId: "user_1"
       },
       select: { id: true }
+    });
+    expect(auditLogService.record).toHaveBeenCalledWith({
+      action: "order.previewed",
+      metadata: {
+        amountUsd: 10,
+        marketId: "market_1",
+        orderId: "order_1",
+        outcome: "Yes",
+        price: 0.53
+      },
+      userId: "user_1"
     });
   });
 
@@ -508,5 +545,376 @@ describe("OrdersService", () => {
       { userId: "user_1" },
       { minimumOrderSize: 5, requiredAmountUsd: 10 }
     );
+  });
+
+  it("creates a signing intent from a previewed order without submitting to CLOB", async () => {
+    const prisma = createPrisma();
+    prisma.order.findFirst.mockResolvedValue({
+      id: "order_1",
+      rawPreview: {
+        amount: 10,
+        orderType: "FAK",
+        signatureType: "POLY_1271",
+        tokenID: "token_yes"
+      },
+      status: "PREVIEWED"
+    });
+    prisma.order.update.mockResolvedValue({
+      id: "order_1",
+      rawPreview: {
+        amount: 10,
+        orderType: "FAK",
+        signatureType: "POLY_1271",
+        tokenID: "token_yes"
+      },
+      status: "SIGNING_REQUESTED"
+    });
+    const auditLogService = createAuditLogService();
+    const service = new OrdersService(
+      prisma as never,
+      createConfig(),
+      createWalletReadinessService() as never,
+      createPaperOrderProvider() as never,
+      auditLogService as never
+    );
+
+    await expect(
+      service.createSigningIntent({ orderId: "order_1" }, { userId: "user_1", role: "USER" })
+    ).resolves.toEqual({
+      id: "order_1",
+      signingPayload: {
+        amount: 10,
+        orderType: "FAK",
+        signatureType: "POLY_1271",
+        tokenID: "token_yes"
+      },
+      status: "SIGNING_REQUESTED"
+    });
+    expect(prisma.order.findFirst).toHaveBeenCalledWith({
+      select: { id: true, rawPreview: true, status: true },
+      where: {
+        id: "order_1",
+        userId: "user_1"
+      }
+    });
+    expect(prisma.order.update).toHaveBeenCalledWith({
+      data: {
+        clobStatus: "SIGNING_REQUESTED",
+        failureReason: null,
+        status: "SIGNING_REQUESTED"
+      },
+      select: { id: true, rawPreview: true, status: true },
+      where: { id: "order_1" }
+    });
+    expect(auditLogService.record).toHaveBeenCalledWith({
+      action: "order.signing_requested",
+      metadata: {
+        orderId: "order_1"
+      },
+      userId: "user_1"
+    });
+  });
+
+  it("stores a signed paper order payload after a signing intent", async () => {
+    const prisma = createPrisma();
+    prisma.order.findFirst.mockResolvedValue({
+      id: "order_1",
+      status: "SIGNING_REQUESTED"
+    });
+    prisma.order.update.mockResolvedValue({
+      id: "order_1",
+      rawSignedOrder: {
+        signature: "0xsig",
+        signedBy: "0x0000000000000000000000000000000000000001"
+      },
+      status: "SIGNED"
+    });
+    const auditLogService = createAuditLogService();
+    const service = new OrdersService(
+      prisma as never,
+      createConfig(),
+      createWalletReadinessService() as never,
+      createPaperOrderProvider() as never,
+      auditLogService as never
+    );
+
+    await expect(
+      service.saveSignedOrder(
+        {
+          orderId: "order_1",
+          signedPayload: {
+            privateKey: "do-not-save",
+            signature: "0xsig",
+            signedBy: "0x0000000000000000000000000000000000000001"
+          }
+        },
+        { userId: "user_1", role: "USER" }
+      )
+    ).resolves.toEqual({
+      id: "order_1",
+      signedPayload: {
+        signature: "0xsig",
+        signedBy: "0x0000000000000000000000000000000000000001"
+      },
+      status: "SIGNED"
+    });
+    expect(JSON.stringify(prisma.order.update.mock.calls)).not.toContain("do-not-save");
+    expect(prisma.order.update).toHaveBeenCalledWith({
+      data: {
+        clobStatus: "SIGNED",
+        failureReason: null,
+        rawSignedOrder: {
+          signature: "0xsig",
+          signedBy: "0x0000000000000000000000000000000000000001"
+        },
+        signedPayload: {
+          signature: "0xsig",
+          signedBy: "0x0000000000000000000000000000000000000001"
+        },
+        status: "SIGNED"
+      },
+      select: { id: true, rawSignedOrder: true, status: true },
+      where: { id: "order_1" }
+    });
+    expect(auditLogService.record).toHaveBeenCalledWith({
+      action: "order.signed",
+      metadata: {
+        orderId: "order_1"
+      },
+      userId: "user_1"
+    });
+  });
+
+  it("rejects order submit in preview mode", async () => {
+    const prisma = createPrisma();
+    prisma.order.findFirst.mockResolvedValue({
+      id: "order_1",
+      rawSignedOrder: { signature: "0xsig" },
+      status: "SIGNED"
+    });
+    const provider = createPaperOrderProvider();
+    const service = new OrdersService(
+      prisma as never,
+      createConfig({ ORDER_ROUTER_MODE: "preview" }),
+      createWalletReadinessService() as never,
+      provider as never
+    );
+
+    await expect(
+      service.submitOrder({ orderId: "order_1" }, { userId: "user_1", role: "USER" })
+    ).rejects.toThrow("Order submit is disabled in preview mode");
+    expect(provider.submit).not.toHaveBeenCalled();
+    expect(prisma.order.update).not.toHaveBeenCalled();
+  });
+
+  it("submits a signed order to the paper provider in paper mode", async () => {
+    const prisma = createPrisma();
+    prisma.order.findFirst.mockResolvedValue({
+      id: "order_1",
+      marketSnapshotId: "snapshot_1",
+      outcome: "Yes",
+      price: { toString: () => "0.5" },
+      rawSignedOrder: { signature: "0xsig" },
+      side: "BUY",
+      size: { toString: () => "20" },
+      userId: "user_1",
+      status: "SIGNED"
+    });
+    prisma.order.update.mockResolvedValue({
+      clobOrderId: "paper_order_1",
+      clobStatus: "SUBMITTED",
+      createdAt: new Date("2026-06-30T00:00:00.000Z"),
+      failureReason: null,
+      id: "order_1",
+      marketSnapshot: { marketId: "market_1", question: "Question?" },
+      outcome: "Yes",
+      price: { toString: () => "0.5" },
+      size: { toString: () => "20" },
+      status: "SUBMITTED",
+      submittedAt: new Date("2026-06-30T00:00:00.000Z"),
+      updatedAt: new Date("2026-06-30T00:00:00.000Z")
+    });
+    const provider = createPaperOrderProvider();
+    const auditLogService = createAuditLogService();
+    const service = new OrdersService(
+      prisma as never,
+      createConfig({ ORDER_ROUTER_MODE: "paper" }),
+      createWalletReadinessService() as never,
+      provider as never,
+      auditLogService as never
+    );
+
+    await expect(
+      service.submitOrder({ orderId: "order_1" }, { userId: "user_1", role: "USER" })
+    ).resolves.toMatchObject({
+      clobOrderId: "paper_order_1",
+      id: "order_1",
+      status: "SUBMITTED"
+    });
+    expect(provider.submit).toHaveBeenCalledWith({
+      orderId: "order_1",
+      signedPayload: { signature: "0xsig" }
+    });
+    expect(prisma.order.update).toHaveBeenCalledWith({
+      data: {
+        clobOrderId: "paper_order_1",
+        clobStatus: "SUBMITTED",
+        failureReason: null,
+        signedPayload: {
+          mode: "paper",
+          orderId: "order_1"
+        },
+        status: "SUBMITTED",
+        submittedAt: expect.any(Date)
+      },
+      select: expect.any(Object),
+      where: { id: "order_1" }
+    });
+    expect(auditLogService.record).toHaveBeenCalledWith({
+      action: "order.submitted",
+      metadata: {
+        clobOrderId: "paper_order_1",
+        mode: "paper",
+        orderId: "order_1"
+      },
+      userId: "user_1"
+    });
+  });
+
+  it("creates a paper trade and position when a paper order is submitted", async () => {
+    const prisma = createPrisma();
+    prisma.order.findFirst.mockResolvedValue({
+      id: "order_1",
+      marketSnapshotId: "snapshot_1",
+      outcome: "Yes",
+      price: { toString: () => "0.5" },
+      rawSignedOrder: { signature: "0xsig" },
+      side: "BUY",
+      size: { toString: () => "20" },
+      status: "SIGNED",
+      userId: "user_1"
+    });
+    prisma.order.update.mockResolvedValue({
+      clobOrderId: "paper_order_1",
+      clobStatus: "SUBMITTED",
+      createdAt: new Date("2026-06-30T00:00:00.000Z"),
+      failureReason: null,
+      id: "order_1",
+      marketSnapshot: { marketId: "market_1", question: "Question?" },
+      outcome: "Yes",
+      price: { toString: () => "0.5" },
+      size: { toString: () => "20" },
+      status: "SUBMITTED",
+      submittedAt: new Date("2026-06-30T00:00:00.000Z"),
+      updatedAt: new Date("2026-06-30T00:00:00.000Z")
+    });
+    const provider = createPaperOrderProvider();
+    const service = new OrdersService(
+      prisma as never,
+      createConfig({ ORDER_ROUTER_MODE: "paper" }),
+      createWalletReadinessService() as never,
+      provider as never
+    );
+
+    await service.submitOrder({ orderId: "order_1" }, { userId: "user_1", role: "USER" });
+
+    expect(prisma.trade.create).toHaveBeenCalledWith({
+      data: {
+        clobTradeId: "paper_order_1:fill",
+        executedAt: expect.any(Date),
+        marketSnapshotId: "snapshot_1",
+        orderId: "order_1",
+        price: "0.5",
+        raw: {
+          mode: "paper",
+          orderId: "order_1"
+        },
+        side: "BUY",
+        size: "20",
+        userId: "user_1"
+      }
+    });
+    expect(prisma.position.upsert).toHaveBeenCalledWith({
+      create: {
+        averagePrice: "0.5",
+        marketSnapshotId: "snapshot_1",
+        outcome: "Yes",
+        size: "20",
+        userId: "user_1"
+      },
+      update: {
+        averagePrice: "0.5",
+        size: {
+          increment: "20"
+        }
+      },
+      where: {
+        userId_marketSnapshotId_outcome: {
+          marketSnapshotId: "snapshot_1",
+          outcome: "Yes",
+          userId: "user_1"
+        }
+      }
+    });
+  });
+
+  it("lists user orders without exposing another user's rows", async () => {
+    const prisma = createPrisma();
+    prisma.order.findMany.mockResolvedValue([
+      {
+        clobOrderId: "paper_order_1",
+        createdAt: new Date("2026-06-30T00:00:00.000Z"),
+        failureReason: null,
+        id: "order_1",
+        marketSnapshot: { marketId: "market_1", question: "Question?" },
+        outcome: "Yes",
+        price: { toString: () => "0.5" },
+        size: { toString: () => "20" },
+        status: "SUBMITTED",
+        submittedAt: new Date("2026-06-30T00:01:00.000Z"),
+        updatedAt: new Date("2026-06-30T00:01:00.000Z")
+      }
+    ]);
+    const service = new OrdersService(
+      prisma as never,
+      createConfig(),
+      createWalletReadinessService() as never,
+      createPaperOrderProvider() as never
+    );
+
+    await expect(service.listOrders({ userId: "user_1", role: "USER" })).resolves.toEqual([
+      {
+        clobOrderId: "paper_order_1",
+        createdAt: new Date("2026-06-30T00:00:00.000Z"),
+        failureReason: null,
+        id: "order_1",
+        market: { marketId: "market_1", question: "Question?" },
+        outcome: "Yes",
+        price: "0.5",
+        size: "20",
+        status: "SUBMITTED",
+        submittedAt: new Date("2026-06-30T00:01:00.000Z"),
+        updatedAt: new Date("2026-06-30T00:01:00.000Z")
+      }
+    ]);
+    expect(prisma.order.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId: "user_1" }
+    }));
+  });
+
+  it("allows admins to list all orders", async () => {
+    const prisma = createPrisma();
+    prisma.order.findMany.mockResolvedValue([]);
+    const service = new OrdersService(
+      prisma as never,
+      createConfig(),
+      createWalletReadinessService() as never,
+      createPaperOrderProvider() as never
+    );
+
+    await expect(service.listOrders({ userId: "admin_1", role: "ADMIN" })).resolves.toEqual([]);
+    expect(prisma.order.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {}
+    }));
   });
 });

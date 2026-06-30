@@ -101,4 +101,28 @@ describe("OrderTicket", () => {
     expect(screen.getByText("EOA wallet is not connected")).toBeInTheDocument();
     expect(screen.getByText("Deposit Wallet is not created")).toBeInTheDocument();
   });
+
+  it("shows a paper submit action when the caller provides a paper handler", () => {
+    const handlePaperSubmit = vi.fn();
+
+    render(
+      <OrderTicket
+        canSubmitPaper
+        locale="en"
+        marketTitle="Spread: Colombia (-5.5)"
+        onPaperSubmit={handlePaperSubmit}
+        outcomes={["Colombia", "DR Congo"]}
+        paperStatus={{ label: "Previewed", detail: "Order order_1 is ready for paper submit" }}
+        prices={[0.25, 0.75]}
+      />
+    );
+
+    expect(screen.getByText("Order order_1 is ready for paper submit")).toBeInTheDocument();
+    const submitButton = screen.getByRole("button", { name: "Submit paper order" });
+    expect(submitButton).toBeEnabled();
+
+    fireEvent.click(submitButton);
+
+    expect(handlePaperSubmit).toHaveBeenCalledTimes(1);
+  });
 });

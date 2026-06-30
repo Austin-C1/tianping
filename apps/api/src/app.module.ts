@@ -9,6 +9,7 @@ import { JobsModule } from "./jobs/jobs.module";
 import { MarketsModule } from "./markets/markets.module";
 import { validateOrderRouterEnv } from "./order-router/order-router.config";
 import { OrdersModule } from "./orders/orders.module";
+import { PortfolioModule } from "./portfolio/portfolio.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { UsersModule } from "./users/users.module";
 import { WalletsModule } from "./wallets/wallets.module";
@@ -37,6 +38,7 @@ import { WalletsModule } from "./wallets/wallets.module";
     MarketsModule,
     WalletsModule,
     OrdersModule,
+    PortfolioModule,
     ComplianceModule
   ],
   controllers: [HealthController]

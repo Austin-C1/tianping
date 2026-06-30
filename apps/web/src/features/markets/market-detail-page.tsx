@@ -14,7 +14,12 @@ import {
   type OrderSide,
   type OrderTicketPreview
 } from "../trading/order-ticket";
-import { previewOrder } from "../trading/order-preview-client";
+import {
+  createSigningIntent,
+  previewOrder,
+  saveSignedOrder,
+  submitOrder
+} from "../trading/order-preview-client";
 import {
   localizeMarketCategory,
   localizeMarketQuestion,
@@ -35,6 +40,11 @@ interface DisplayMarket {
   prices: number[];
 }
 
+interface PaperOrderStatus {
+  detail?: string;
+  label: string;
+}
+
 const copy = {
   "zh-CN": {
     apiConnected: "API 已连接",
@@ -46,6 +56,15 @@ const copy = {
     marketRules: "市场规则",
     marketRulesBody: "当前阶段只展示公开市场数据和订单预览，不提交真实 CLOB 订单。",
     orderBook: "盘口",
+    paperFailed: "提交失败",
+    paperFailedDetail: "paper 提交流程失败，请重新预览后再试。",
+    paperLoginRequired: "需要登录后才能提交 paper 订单。",
+    paperPreviewed: "已预览",
+    paperReadyDetail: "订单 {orderId} 已准备好 paper 提交",
+    paperSigning: "签名中",
+    paperSigningDetail: "正在创建 paper 签名",
+    paperSubmitted: "已提交",
+    paperSubmittedAs: "Paper 编号",
     previewOnly: "仅预览",
     readiness: "交易准备",
     route: "签名路径",
@@ -68,6 +87,15 @@ const copy = {
     marketRules: "Market rules",
     marketRulesBody: "This stage only shows public market data and order previews. It does not submit real CLOB orders.",
     orderBook: "Order book",
+    paperFailed: "Submit failed",
+    paperFailedDetail: "The paper submit flow failed. Preview the order again and retry.",
+    paperLoginRequired: "Sign in before submitting a paper order.",
+    paperPreviewed: "Previewed",
+    paperReadyDetail: "Order {orderId} is ready for paper submit",
+    paperSigning: "Signing",
+    paperSigningDetail: "Creating paper signature",
+    paperSubmitted: "Submitted",
+    paperSubmittedAs: "Submitted as",
     previewOnly: "Preview only",
     readiness: "Trade readiness",
     route: "Signing route",
@@ -90,6 +118,9 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
   const [markets, setMarkets] = useState<MarketListItem[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [selectedSide, setSelectedSide] = useState<OrderSide>(initialSide);
+  const [previewOrderId, setPreviewOrderId] = useState<string | null>(null);
+  const [paperStatus, setPaperStatus] = useState<PaperOrderStatus | undefined>();
+  const [isPaperSubmitting, setIsPaperSubmitting] = useState(false);
   const [readinessGates, setReadinessGates] = useState<OrderReadinessGate[]>([]);
   const lastActivityKey = useRef("");
 
@@ -118,6 +149,9 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
 
   useEffect(() => {
     setSelectedSide(initialSide);
+    setPreviewOrderId(null);
+    setPaperStatus(undefined);
+    setReadinessGates([]);
   }, [initialSide, initialMarketId]);
 
   useEffect(() => {
@@ -164,14 +198,91 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
         orderType: "FAK"
       })
         .then((response) => {
+          if (response?.id) {
+            setPreviewOrderId(response.id);
+            setPaperStatus({
+              label: text.paperPreviewed,
+              detail: text.paperReadyDetail.replace("{orderId}", response.id)
+            });
+          }
+
           if (response?.readiness?.gates) {
             setReadinessGates(response.readiness.gates);
           }
         })
         .catch(() => undefined);
     },
-    [selectedMarket]
+    [selectedMarket, text.paperPreviewed, text.paperReadyDetail]
   );
+
+  const handlePaperSubmit = useCallback(async () => {
+    if (!previewOrderId) {
+      return;
+    }
+
+    setIsPaperSubmitting(true);
+    setPaperStatus({
+      label: text.paperSigning,
+      detail: text.paperSigningDetail
+    });
+
+    try {
+      const signingIntent = await createSigningIntent({ orderId: previewOrderId });
+      if (!signingIntent) {
+        setPaperStatus({
+          label: text.paperFailed,
+          detail: text.paperLoginRequired
+        });
+        return;
+      }
+
+      const signedOrder = await saveSignedOrder({
+        orderId: signingIntent.id,
+        signedPayload: {
+          mode: "paper",
+          signature: `paper-signature-${signingIntent.id}`,
+          signingPayload: signingIntent.signingPayload
+        }
+      });
+      if (!signedOrder) {
+        setPaperStatus({
+          label: text.paperFailed,
+          detail: text.paperLoginRequired
+        });
+        return;
+      }
+
+      const submittedOrder = await submitOrder({ orderId: signedOrder.id });
+      if (!submittedOrder) {
+        setPaperStatus({
+          label: text.paperFailed,
+          detail: text.paperLoginRequired
+        });
+        return;
+      }
+
+      setPaperStatus({
+        label: text.paperSubmitted,
+        detail: `${text.paperSubmittedAs} ${submittedOrder.clobOrderId ?? submittedOrder.id}`
+      });
+    } catch {
+      setPaperStatus({
+        label: text.paperFailed,
+        detail: text.paperFailedDetail
+      });
+    } finally {
+      setIsPaperSubmitting(false);
+    }
+  }, [
+    previewOrderId,
+    text.paperFailed,
+    text.paperFailedDetail,
+    text.paperLoginRequired,
+    text.paperSigning,
+    text.paperSigningDetail,
+    text.paperSubmitted,
+    text.paperSubmittedAs
+  ]);
 
   const handleSideChange = useCallback(
     (side: OrderSide) => {
@@ -266,12 +377,16 @@ export function MarketDetailPage({ initialMarketId, initialSide = "yes" }: Marke
 
         <aside className="detail-ticket-pane">
           <OrderTicket
+            canSubmitPaper={Boolean(previewOrderId) && !isPaperSubmitting}
             initialSide={initialSide}
+            isPaperSubmitting={isPaperSubmitting}
             locale={locale}
             marketTitle={selectedMarket.question}
+            onPaperSubmit={handlePaperSubmit}
             onPreviewChange={handlePreviewChange}
             onSideChange={handleSideChange}
             outcomes={tradableOutcomes}
+            paperStatus={paperStatus}
             prices={tradablePrices}
             readinessGates={readinessGates}
             selectedSide={selectedSide}

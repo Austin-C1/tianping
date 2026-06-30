@@ -687,6 +687,47 @@ p {
   margin-top: 16px;
 }
 
+.portfolio-list {
+  display: grid;
+  gap: 10px;
+}
+
+.portfolio-row {
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 58px;
+  padding-bottom: 10px;
+}
+
+.portfolio-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.portfolio-row div {
+  display: grid;
+  gap: 4px;
+}
+
+.portfolio-row div:last-child {
+  justify-items: end;
+}
+
+.portfolio-row strong {
+  color: #111827;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.portfolio-row span {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .activity-list {
   display: grid;
   gap: 12px;
