@@ -224,3 +224,80 @@ test("admin operations pages show live API status", async ({ page }) => {
   });
   await expect(page.getByText("lastFailureReason")).toBeVisible();
 });
+
+test("admin operations console shows sync jobs and enqueues market sync", async ({ page }) => {
+  let enqueueRequests = 0;
+  let syncJobs = [
+    {
+      completedAt: "2026-06-30T12:10:00.000Z",
+      createdAt: "2026-06-30T12:00:00.000Z",
+      failureReason: null,
+      id: "sync_run_existing",
+      metadata: {
+        source: "admin"
+      },
+      queueJobId: "bull_job_existing",
+      requestedById: "admin_1",
+      result: {
+        synced: 2
+      },
+      startedAt: "2026-06-30T12:01:00.000Z",
+      status: "SUCCEEDED",
+      type: "MARKET_SYNC",
+      updatedAt: "2026-06-30T12:10:00.000Z"
+    }
+  ];
+
+  await page.goto(`${ADMIN_URL}/#/login`);
+
+  await page.locator('input[autocomplete="username"]').fill("admin@pmx.local");
+  await page.locator('input[autocomplete="current-password"]').fill(PASSWORD);
+  await page.getByRole("button", { name: LOGIN_BUTTON_NAME }).click();
+
+  await expect(page).toHaveURL(`${ADMIN_URL}/#/dashboard`, { timeout: 15_000 });
+
+  await page.route("**/admin/sync/jobs", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(syncJobs)
+    });
+  });
+  await page.route("**/admin/sync/market", async (route) => {
+    enqueueRequests += 1;
+    const queuedJob = {
+      completedAt: null,
+      createdAt: "2026-06-30T12:20:00.000Z",
+      failureReason: null,
+      id: "sync_run_queued",
+      metadata: {
+        source: "admin"
+      },
+      queueJobId: "bull_job_queued",
+      requestedById: "admin_1",
+      result: null,
+      startedAt: null,
+      status: "QUEUED",
+      type: "MARKET_SYNC",
+      updatedAt: "2026-06-30T12:20:00.000Z"
+    };
+    syncJobs = [queuedJob, ...syncJobs];
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(queuedJob)
+    });
+  });
+
+  await page.goto(`${ADMIN_URL}/#/operations`);
+
+  await expect(page.getByRole("heading", { level: 2, name: "运维" })).toBeVisible();
+  await expect(page.getByText("这里只显示后台同步任务记录，不启用真实 CLOB submit")).toBeVisible();
+  await expect(page.getByText("sync_run_existing")).toBeVisible();
+  await expect(page.getByText("bull_job_existing")).toBeVisible();
+  await expect(page.getByRole("button", { name: "排队同步市场" })).toBeVisible();
+
+  await page.getByRole("button", { name: "排队同步市场" }).click();
+
+  await expect(page.getByText("sync_run_queued")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("bull_job_queued")).toBeVisible();
+  expect(enqueueRequests).toBe(1);
+});

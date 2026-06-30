@@ -282,6 +282,20 @@ a {
   gap: 10px;
 }
 
+.operations-result-cell {
+  display: block;
+  max-width: 220px;
+  overflow: hidden;
+  color: #344054;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operations-failure {
+  color: #b42318;
+  font-weight: 600;
+}
+
 @media (max-width: 900px) {
   .metric-grid,
   .approval-panel,

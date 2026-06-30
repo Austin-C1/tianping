@@ -43,6 +43,7 @@
 <script setup lang="ts">
 import {
   AuditOutlined,
+  ControlOutlined,
   DashboardOutlined,
   LineChartOutlined,
   SafetyCertificateOutlined,
@@ -63,6 +64,7 @@ const menuItems = [
   { key: '/users', icon: () => h(TeamOutlined), label: '用户' },
   { key: '/markets', icon: () => h(LineChartOutlined), label: '市场' },
   { key: '/orders', icon: () => h(ShoppingCartOutlined), label: '订单' },
+  { key: '/operations', icon: () => h(ControlOutlined), label: '运维' },
   { key: '/audit', icon: () => h(AuditOutlined), label: '审计' },
   { key: '/risk', icon: () => h(SafetyCertificateOutlined), label: '风险' },
   { key: '/settings', icon: () => h(SettingOutlined), label: '设置' }
