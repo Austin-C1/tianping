@@ -37,7 +37,7 @@ Real CLOB submit is still not implemented and must stay disabled.
 
 ## Active Module State
 
-Current completed module: `queue-sync-readiness`.
+Current completed module: `sync-operations-console`.
 
 Recent completed modules:
 
@@ -48,6 +48,7 @@ Recent completed modules:
 - `wallet-funding-readiness`
 - `manual-live-approval`
 - `queue-sync-readiness`
+- `sync-operations-console`
 - `api-client`
 - `api-repositories`
 - `v2-web-business-flow-layer`
@@ -87,6 +88,8 @@ PREVIEWED -> SIGNING_REQUESTED -> SIGNED -> SUBMITTED
 - Admin risk gates include `queue-sync-readiness`, based on the latest `MARKET_SYNC` `SyncJobRun`.
 - Admin operational gates (`/admin/gates`) also include `queue-sync-readiness`, so the Admin Markets page does not fall back to stale pending state.
 - Queue sync readiness does not implement real CLOB submit, live order status sync, live trade sync, live position sync, cancellation, or user fund movement.
+- Admin `/operations` lists recent `SyncJobRun` records, shows queue readiness context, and can enqueue the existing `MARKET_SYNC` job.
+- Sync Operations Console is an Admin UI surface only. It does not add new queue processors, live CLOB calls, order submit behavior, or user fund movement.
 - Web/Admin low-level API access should go through `@pmx/api-client`.
 - Web UI components should call actions/flows rather than feature `*-client` modules directly.
 - API services should prefer repository interfaces under `apps/api/src/infrastructure/repositories` instead of direct Prisma access when a repository contract exists.
@@ -130,6 +133,14 @@ npm run generate --workspace @pmx/api-client
 npm run test --workspace @pmx/api -- --runTestsByPath src/infrastructure/repositories/prisma-sync-job-runs.repository.spec.ts src/infrastructure/repositories/repositories.module.spec.ts src/jobs/sync-jobs.service.spec.ts src/jobs/sync-jobs.controller.spec.ts src/jobs/market-sync.processor.spec.ts src/admin/admin.service.spec.ts src/openapi/openapi-document.spec.ts
 npm run test --workspace @pmx/api-client
 npm run test --workspace @pmx/admin
+```
+
+Sync operations console targeted verification on 2026-07-01 passed:
+
+```bash
+npm run test --workspace @pmx/admin
+npm run build --workspace @pmx/admin
+npm run test:e2e -- tests/e2e/admin.spec.ts --grep "operations console"
 ```
 
 Queue sync readiness full verification on 2026-06-30 passed:

@@ -78,3 +78,11 @@ export function fetchAdminEnvironment(): Promise<OrderRouterEnvironment> {
 export function enqueueMarketSync(): Promise<SyncJobRun> {
   return runAdminApiRequest(() => createAdminApiClient().admin.enqueueMarketSync())
 }
+
+export function fetchSyncJobs(): Promise<SyncJobRun[]> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.listSyncJobs())
+}
+
+export function fetchSyncJob(id: string): Promise<SyncJobRun> {
+  return runAdminApiRequest(() => createAdminApiClient().admin.getSyncJob(id))
+}

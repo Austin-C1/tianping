@@ -5,6 +5,7 @@ import AuditView from '@/views/AuditView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import LoginView from '@/views/LoginView.vue'
 import OrdersView from '@/views/OrdersView.vue'
+import OperationsView from '@/views/OperationsView.vue'
 import PlaceholderView from '@/views/PlaceholderView.vue'
 import RiskView from '@/views/RiskView.vue'
 import UsersView from '@/views/UsersView.vue'
@@ -48,6 +49,12 @@ const routes: RouteRecordRaw[] = [
         name: 'Orders',
         component: OrdersView,
         meta: { title: '订单' }
+      },
+      {
+        path: 'operations',
+        name: 'Operations',
+        component: OperationsView,
+        meta: { title: '运维' }
       },
       {
         path: 'audit',
