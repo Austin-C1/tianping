@@ -1,58 +1,47 @@
 # PMX Polymarket 交易工作台
 
-PMX 是一个非托管的 Polymarket 第三方交易工作台。当前目标是搭建可验证的交易准备链路：用户注册、登录、市场浏览、钱包绑定、Deposit Wallet、订单预览、用户签名、API 校验，以及后续 CLOB 路由和状态同步。
+PMX 是一个非托管的 Polymarket 交易准备和纸币交易工作台。当前版本的重点是建立可验证的交易准备链路：认证、市场浏览、钱包证明、Deposit Wallet readiness、资金 readiness、订单预览、签名载荷记录、paper submit、纸币持仓，以及 Admin 风险与审计后台。
 
-平台不托管用户资金，不保存用户私钥。真实 CLOB 下单默认未启用，启用前需要人工确认 relayer、权限、地区限制、市场范围和金额上限。
+真实 CLOB submit 仍未实现，也不会因为手动批准而自动启用。`manual-live-approval` 只记录“谁批准、为什么批准、何时撤销”，不提交真实订单、不移动用户资金。
 
-## 架构图
+## 当前状态
 
-```mermaid
-flowchart LR
-  User["交易用户"] --> Web["Web 前台<br/>Next.js / React<br/>apps/web"]
-  Ops["运营 / 风控"] --> Admin["Admin 后台<br/>Vue 3 / Vite<br/>apps/admin"]
-
-  Web --> API["API 服务<br/>NestJS<br/>apps/api"]
-  Admin --> API
-
-  API --> Prisma["Prisma<br/>schema / migration"]
-  Prisma --> Postgres[("PostgreSQL<br/>用户 / 钱包 / 市场 / 订单 / 审计")]
-
-  API --> Redis[("Redis")]
-  Redis --> Queue["BullMQ 队列<br/>市场 / 订单 / 成交 / 持仓同步"]
-
-  API --> Gamma["Polymarket Gamma API<br/>市场公开数据"]
-  API --> CLOB["Polymarket CLOB / Relayer<br/>真实订单路由"]
-
-  Web --> Wallet["用户 EVM 钱包<br/>签名 / 授权"]
-  Wallet --> API
-```
+| 模块 | 状态 |
+|---|---|
+| Nx Workspace | 已实现，包含项目 metadata、workspace targets 和验证入口 |
+| Contracts / Shared | 已实现，`libs/contracts` 为共享契约入口，`@pmx/shared` 保持兼容转发 |
+| Domain | 已实现，订单领域逻辑放在 `libs/domain` |
+| API Client | 已实现，Web/Admin 通过 `@pmx/api-client` 使用生成/类型化 API |
+| API Repository Boundaries | 已实现，API 服务优先走 repository 边界 |
+| Web Flow Layer | 已实现，Web UI 通过 actions/flows 调用业务流程 |
+| Orders Paper Loop | 已实现，订单支持 preview -> signing requested -> signed -> paper submitted |
+| Paper Portfolio | 已实现，paper submit 写入本地 Trade/Position，Web Portfolio 可读取 |
+| Audit Log | 已实现，认证、订单、portfolio、live approval 写入审计记录 |
+| Risk Gates | 已实现，Admin `/risk` 汇总上线前风险关口 |
+| Wallet Funding Readiness | 已实现，基于缓存的 Deposit Wallet pUSD 与 allowance 状态判断 |
+| Manual Live Approval | 已实现，Admin-only 批准/撤销记录和审计，不启用真实 CLOB submit |
 
 ## 技术栈
 
-| 模块 | 技术 | 路径 |
+| 区域 | 技术 | 路径 |
 |---|---|---|
-| Web 前台 | Next.js、React、Vitest | `apps/web` |
-| Admin 后台 | Vue 3、Vite、Pinia、Vue Router、Ant Design Vue | `apps/admin` |
-| API 后端 | NestJS、Prisma、BullMQ、Jest | `apps/api` |
-| 共享包 | TypeScript 类型、阶段、人工 Gate 常量 | `packages/shared` |
-| 数据库 | PostgreSQL | `apps/api/prisma` |
-| 队列与缓存 | Redis、BullMQ | `apps/api/src/jobs` |
+| Web | Next.js, React, Vitest | `apps/web` |
+| Admin | Vue 3, Vite, Pinia, Vue Router, Ant Design Vue | `apps/admin` |
+| API | NestJS, Prisma, BullMQ, Jest | `apps/api` |
+| Contracts | TypeScript shared contracts | `libs/contracts` |
+| Domain | Pure TypeScript domain logic | `libs/domain` |
+| API Client | Generated/typed API client | `libs/api-client` |
+| Database | PostgreSQL, Prisma migrations | `apps/api/prisma` |
+| Queue/Cache | Redis, BullMQ | `apps/api/src/jobs` |
 | E2E | Playwright | `tests/e2e` |
-
-## 目录说明
-
-| 路径 | 说明 |
-|---|---|
-| `apps/web` | 面向交易用户的前台，包含市场、账户、钱包和订单相关页面 |
-| `apps/admin` | 面向运营和风控的后台，包含登录、Dashboard、用户管理等页面 |
-| `apps/api` | 后端 API，负责认证、权限、市场数据代理、订单校验、钱包状态和审计 |
-| `packages/shared` | 前后端共享的类型和业务阶段常量 |
-| `docs` | 架构、开发计划、本地开发和验收说明 |
-| `tests/e2e` | Playwright 浏览器端验收测试 |
 
 ## 本地启动
 
-要求 Node.js `>=20.11`，Admin 子项目要求 Node.js `>=20.19.0`。
+要求：
+
+- Node.js `>=20.11`
+- Admin workspace 需要 Node.js `>=20.19.0`
+- Docker / Docker Compose
 
 ```bash
 cp .env.example .env
@@ -68,11 +57,11 @@ npm run dev
 
 | 服务 | 地址 |
 |---|---|
-| Web | `http://localhost:3000` |
-| Admin | `http://localhost:3001/#/login` |
-| API Health | `http://localhost:4000/health` |
+| Web | `http://127.0.0.1:3000` |
+| Admin | `http://127.0.0.1:3001/#/login` |
+| API Health | `http://127.0.0.1:4000/health` |
 
-默认管理员账号：
+默认本地 Admin：
 
 | 字段 | 值 |
 |---|---|
@@ -84,12 +73,12 @@ npm run dev
 ```bash
 npm run dev
 npm run build
+npm run lint
 npm test
 npm run test:e2e
-npm run lint
 ```
 
-单独启动某一端：
+单独启动：
 
 ```bash
 npm run start:dev --workspace @pmx/api
@@ -97,48 +86,73 @@ npm run dev --workspace @pmx/web
 npm run dev --workspace @pmx/admin
 ```
 
-## 核心数据流
-
-1. Web 通过 API 读取市场、账户、钱包、订单和持仓状态。
-2. API 通过 Prisma 读写 PostgreSQL。
-3. Redis 和 BullMQ 用于异步同步和后续限流。
-4. 市场数据默认读取 Polymarket Gamma API，只做展示和同步。
-5. 用户通过自己的 EVM 钱包完成签名和授权。
-6. 订单预览只返回校验结果、风险提示和待签名摘要，不直接提交 CLOB。
-7. 用户签名后，API 校验签名和订单摘要，再按配置路由到 CLOB 或保持 preview 模式。
-8. Admin 只读取运营和风控数据，不参与用户签名和资金控制。
-
-## 当前边界
-
-| 项目 | 状态 |
-|---|---|
-| 资金托管 | 平台不托管用户资金 |
-| 私钥 | 平台不接触、不保存用户私钥 |
-| 市场数据 | 已接入 Polymarket Gamma API，只读 |
-| 真实交易 | 默认 `ORDER_ROUTER_MODE=preview`，真实 CLOB 提交未启用 |
-| 人工 Gate | relayer 权限、Deposit Wallet、geoblock、真实交易范围都需要上线前确认 |
-| Admin | 当前是按 Vben v5 技术方向建设的精简后台，不是完整官方 Vben v5 monorepo |
-
-## 验证
-
-本地验收命令：
+常用 targeted verification：
 
 ```bash
-npm run build
+npm test --workspace @pmx/api -- auth
+npm test --workspace @pmx/api -- orders
+npm test --workspace @pmx/api -- admin
+npm test --workspace @pmx/web -- order
+npm run build --workspace @pmx/admin
+npm run test --workspace @pmx/api-client
+```
+
+## 核心流程
+
+1. Web 读取市场、账户、钱包、订单和 portfolio 状态。
+2. API 通过 Prisma 读写 PostgreSQL。
+3. Redis/BullMQ 用于异步同步和后续队列任务。
+4. 市场数据读取 Polymarket Gamma API，用于展示和同步。
+5. 用户通过自己的 EVM 钱包完成证明和签名准备。
+6. 订单 preview 创建 CLOB V2 draft，并持久化 `PREVIEWED` 本地订单。
+7. 签名 intent 和 signed payload 只记录本地准备状态。
+8. `ORDER_ROUTER_MODE=paper` 可执行本地 paper submit，并写入 Trade/Position。
+9. `ORDER_ROUTER_MODE=live` 仍拒绝 submit，因为真实 CLOB submit 未实现。
+10. Admin 读取 audit、orders、risk gates 和 live approval 状态，不参与用户签名或资金控制。
+
+## 安全边界
+
+| 项目 | 当前边界 |
+|---|---|
+| 资金托管 | 平台不托管用户资金 |
+| 私钥 | 平台不接触、不保存用户私钥、mnemonic、seed 或 secret-like 字段 |
+| 真实交易 | 真实 CLOB submit 未实现，live 模式仍被阻断 |
+| Paper trading | 只写本地 paper order、trade、position 数据 |
+| Manual approval | 只记录 Admin approval/revoke 状态，不改变 submit 行为 |
+| Admin risk | 只读取缓存状态，不触发链上刷新或外部 CLOB 调用 |
+| Audit log | 写入结构化审计记录，并清理敏感 metadata |
+
+## 依赖风险说明
+
+2026-06-30 已运行 `npm audit fix`，安全更新了 lockfile 中可自动修复的依赖。剩余 `npm audit` 风险主要来自上游依赖链：
+
+| 来源 | 说明 |
+|---|---|
+| Polymarket SDK | 仍包含旧 `axios`、`ethers@5`、`viem`、`ws` 链路，替换需要单独做 SDK 合约评审 |
+| Nest / multer | `npm audit fix --force` 会建议破坏性降级 Nest，不直接执行 |
+| Next / postcss | `npm audit fix --force` 会建议破坏性降级 Next，不直接执行 |
+| Vite / esbuild | npm 报告普通修复路径，但当前 workspace 解析没有产生兼容更新 |
+
+## 文档入口
+
+| 文档 | 用途 |
+|---|---|
+| `docs/project-memory.md` | 项目记忆、稳定事实、验证命令 |
+| `docs/module-index.md` | 模块状态和强绑定关系 |
+| `docs/modules/` | 独立模块文档 |
+| `docs/development-reports/2026-06-30-pmx-development-report.md` | 2026-06-30 开发报告 |
+| `docs/local-development.md` | 本地开发说明 |
+| `docs/development-plan.md` | 项目开发计划 |
+
+## 最新验证
+
+2026-06-30 当前分支验证通过：
+
+```bash
 npm test
+npm run build
+npm run lint
 npm run test:e2e
 ```
 
-通过标准：
-
-- Web、Admin、API、Shared 都能构建。
-- API 和 Web 单元测试通过。
-- Playwright 主流程通过。
-- 普通用户不能进入 Admin。
-- 管理员能进入 Admin 并看到真实用户数据。
-
-更多说明见：
-
-- `docs/architecture.md`
-- `docs/local-development.md`
-- `docs/development-plan.md`
+其中 `npm run test:e2e` 通过 16/16。
