@@ -51,6 +51,7 @@ model User {
   auditLogs            AuditLog[]
   liveTradingApprovalsApproved LiveTradingApproval[] @relation("LiveTradingApprovalApprovedBy")
   liveTradingApprovalsRevoked  LiveTradingApproval[] @relation("LiveTradingApprovalRevokedBy")
+  syncJobRunsRequested SyncJobRun[] @relation("SyncJobRunRequestedBy")
   rateLimitEvents      RateLimitEvent[]
   walletChallenges     WalletChallenge[]
   depositWallets       DepositWallet[]
@@ -301,6 +302,27 @@ model LiveTradingApproval {
   @@index([approvedById, approvedAt])
   @@index([revokedById, revokedAt])
   @@index([revokedAt, approvedAt])
+}
+
+model SyncJobRun {
+  id            String    @id @default(cuid())
+  type          String
+  status        String    @default("QUEUED")
+  queueJobId    String?
+  requestedById String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  failureReason String?
+  metadata      Json?
+  result        Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  requestedBy   User?     @relation("SyncJobRunRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+
+  @@index([type, status, createdAt])
+  @@index([requestedById, createdAt])
+  @@index([queueJobId])
+  @@index([status, updatedAt])
 }
 
 model RateLimitEvent {

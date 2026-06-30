@@ -7,7 +7,7 @@
       </div>
       <ASpace>
         <AButton v-if="isMarketsPage" :loading="syncing" type="primary" @click="handleMarketSync">
-          同步市场
+          排队同步市场
         </AButton>
         <AButton :loading="loading" @click="loadStatus">刷新</AButton>
       </ASpace>
@@ -33,9 +33,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
+  enqueueMarketSync,
   fetchAdminGates,
   fetchAdminSummary,
-  syncMarkets,
   type AdminGate,
   type AdminSummary
 } from '@/api/admin'
@@ -64,10 +64,11 @@ const statusItems = computed(() => {
       { label: 'marketQuotesSynced', value: String(currentSummary.marketQuotesSynced) },
       { label: 'latestMarketSyncedAt', value: formatDate(currentSummary.latestMarketSyncedAt) },
       { label: 'latestMarketQuoteSyncedAt', value: formatDate(currentSummary.latestMarketQuoteSyncedAt) },
-      { label: 'lastSyncResult', value: syncMessage.value || '点击“同步市场”刷新' },
+      { label: 'lastSyncResult', value: syncMessage.value || '点击“排队同步市场”创建后台同步任务' },
       { label: 'lastFailureReason', value: syncFailureReason.value || 'none' },
       { label: '市场关口', value: gateStatus('market-data-sync') },
-      { label: '行情关口', value: gateStatus('market-quote-sync') }
+      { label: '行情关口', value: gateStatus('market-quote-sync') },
+      { label: '队列同步关口', value: gateStatus('queue-sync-readiness') }
     ]
   }
 
@@ -128,16 +129,14 @@ async function handleMarketSync() {
   syncFailureReason.value = ''
 
   try {
-    const result = await syncMarkets()
-    syncFailureReason.value = result.error ?? 'none'
-    syncMessage.value = result.error
-      ? `市场成功 ${result.synced} / 失败 ${result.failed}，行情成功 ${result.quotesSynced} / 失败 ${result.quotesFailed}：${result.error}`
-      : `市场成功 ${result.synced} / 失败 ${result.failed}，行情成功 ${result.quotesSynced} / 失败 ${result.quotesFailed}`
+    const result = await enqueueMarketSync()
+    syncFailureReason.value = result.failureReason ?? 'none'
+    syncMessage.value = `后台任务 ${result.id} 已创建，状态 ${statusLabel(result.status)}。不启用真实 CLOB submit。`
     await loadStatus()
   } catch (err) {
-    const message = err instanceof Error ? err.message : '同步市场失败'
+    const message = err instanceof Error ? err.message : '排队同步市场失败'
     error.value = message
-    syncMessage.value = `市场成功 0 / 失败 1，行情成功 0 / 失败 0：${message}`
+    syncMessage.value = `后台同步任务创建失败：${message}`
     syncFailureReason.value = message
   } finally {
     syncing.value = false
@@ -153,8 +152,12 @@ onMounted(loadStatus)
 function statusLabel(status: string) {
   const statuses: Record<string, string> = {
     BLOCKED: '被封锁',
+    FAILED: '失败',
     PENDING: '待处理',
-    READY: '就绪'
+    QUEUED: '待处理',
+    READY: '就绪',
+    RUNNING: '运行中',
+    SUCCEEDED: '成功'
   }
 
   return statuses[status] ?? status

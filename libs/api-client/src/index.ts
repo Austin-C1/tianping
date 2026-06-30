@@ -6,6 +6,7 @@ export type AuthResult = components["schemas"]["AuthResultDto"];
 export type AuthUser = components["schemas"]["AuthUserDto"];
 export type MarketListItem = components["schemas"]["MarketListItemDto"];
 export type MarketSyncResult = components["schemas"]["MarketSyncResultDto"];
+export type SyncJobRun = components["schemas"]["SyncJobRunDto"];
 export type AdminSummary = components["schemas"]["AdminSummaryDto"];
 export type AdminGate = components["schemas"]["AdminGateDto"];
 export type OrderRouterEnvironment =
@@ -198,6 +199,13 @@ export function createApiClient(options: CreateApiClientOptions = {}) {
           body,
           { authenticated: true }
         ),
+      enqueueMarketSync: () =>
+        request<SyncJobRun, Record<string, never>>(
+          "POST",
+          "/admin/sync/market",
+          {},
+          { authenticated: true }
+        ),
       getAuditLogs: () =>
         request<ManagedAuditLog[]>("GET", "/admin/audit", undefined, {
           authenticated: true
@@ -220,6 +228,17 @@ export function createApiClient(options: CreateApiClientOptions = {}) {
         }),
       getRiskGateReport: () =>
         request<RiskGateReport>("GET", "/admin/risk/gates", undefined, {
+          authenticated: true
+        }),
+      getSyncJob: (id: string) =>
+        request<SyncJobRun>(
+          "GET",
+          `/admin/sync/jobs/${encodeURIComponent(id)}`,
+          undefined,
+          { authenticated: true }
+        ),
+      listSyncJobs: () =>
+        request<SyncJobRun[]>("GET", "/admin/sync/jobs", undefined, {
           authenticated: true
         }),
       listUsers: () =>

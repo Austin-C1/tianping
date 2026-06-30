@@ -10,6 +10,74 @@ export interface AuditLogsRepository {
   create(input: CreateAuditLogInput): Promise<void>;
 }
 
+export type SyncJobRunStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
+export type SyncJobRunType =
+  | "MARKET_SYNC"
+  | "ORDER_STATUS_SYNC"
+  | "POSITION_SYNC"
+  | "QUOTE_SYNC"
+  | "TRADE_SYNC";
+
+export interface SyncJobRunRecord {
+  completedAt: Date | null;
+  createdAt: Date;
+  failureReason: string | null;
+  id: string;
+  metadata: Prisma.JsonValue | null;
+  queueJobId: string | null;
+  requestedById: string | null;
+  result: Prisma.JsonValue | null;
+  startedAt: Date | null;
+  status: string;
+  type: string;
+  updatedAt: Date;
+}
+
+export interface CreateSyncJobRunInput {
+  metadata?: Record<string, unknown>;
+  requestedById: string | null;
+  type: SyncJobRunType;
+}
+
+export interface AttachSyncJobQueueInput {
+  id: string;
+  queueJobId: string;
+}
+
+export interface MarkSyncJobRunningInput {
+  id: string;
+  startedAt: Date;
+}
+
+export interface MarkSyncJobSucceededInput {
+  completedAt: Date;
+  id: string;
+  result: Record<string, unknown>;
+}
+
+export interface MarkSyncJobFailedInput {
+  completedAt: Date;
+  failureReason: string;
+  id: string;
+  result?: Record<string, unknown>;
+}
+
+export interface ListSyncJobRunsInput {
+  limit?: number;
+  type?: SyncJobRunType;
+}
+
+export interface SyncJobRunsRepository {
+  attachQueueJob(input: AttachSyncJobQueueInput): Promise<SyncJobRunRecord>;
+  create(input: CreateSyncJobRunInput): Promise<SyncJobRunRecord>;
+  findActiveByType(type: SyncJobRunType): Promise<SyncJobRunRecord | null>;
+  findById(id: string): Promise<SyncJobRunRecord | null>;
+  listRecent(input?: ListSyncJobRunsInput): Promise<SyncJobRunRecord[]>;
+  markFailed(input: MarkSyncJobFailedInput): Promise<SyncJobRunRecord | null>;
+  markRunning(input: MarkSyncJobRunningInput): Promise<SyncJobRunRecord | null>;
+  markSucceeded(input: MarkSyncJobSucceededInput): Promise<SyncJobRunRecord | null>;
+}
+
 export type DecimalLike = string | number | { toString(): string };
 
 export interface DepositWalletFundingRecord {

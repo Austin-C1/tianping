@@ -4,12 +4,14 @@ import { PrismaAuditLogsRepository } from "./prisma-audit-logs.repository";
 import { PrismaDepositWalletsRepository } from "./prisma-deposit-wallets.repository";
 import { PrismaFundingRepository } from "./prisma-funding.repository";
 import { PrismaOrdersRepository } from "./prisma-orders.repository";
+import { PrismaSyncJobRunsRepository } from "./prisma-sync-job-runs.repository";
 import { PrismaWalletsRepository } from "./prisma-wallets.repository";
 import {
   AUDIT_LOGS_REPOSITORY,
   DEPOSIT_WALLETS_REPOSITORY,
   FUNDING_REPOSITORY,
   ORDERS_REPOSITORY,
+  SYNC_JOB_RUNS_REPOSITORY,
   WALLETS_REPOSITORY
 } from "./repository.tokens";
 
@@ -20,6 +22,7 @@ import {
     PrismaDepositWalletsRepository,
     PrismaFundingRepository,
     PrismaOrdersRepository,
+    PrismaSyncJobRunsRepository,
     PrismaWalletsRepository,
     {
       provide: AUDIT_LOGS_REPOSITORY,
@@ -38,6 +41,10 @@ import {
       useExisting: PrismaOrdersRepository
     },
     {
+      provide: SYNC_JOB_RUNS_REPOSITORY,
+      useExisting: PrismaSyncJobRunsRepository
+    },
+    {
       provide: WALLETS_REPOSITORY,
       useExisting: PrismaWalletsRepository
     }
@@ -47,6 +54,7 @@ import {
     DEPOSIT_WALLETS_REPOSITORY,
     FUNDING_REPOSITORY,
     ORDERS_REPOSITORY,
+    SYNC_JOB_RUNS_REPOSITORY,
     WALLETS_REPOSITORY
   ]
 })

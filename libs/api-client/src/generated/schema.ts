@@ -20,6 +20,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/sync/market": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SyncJobsController_enqueueMarketSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/sync/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SyncJobsController_listJobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/sync/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SyncJobsController_getJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/register": {
         parameters: {
             query?: never;
@@ -62,6 +110,54 @@ export interface paths {
         get: operations["AuthController_me"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/markets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MarketsController_listMarkets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/markets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MarketsController_getMarket"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/markets/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarketsController_syncMarkets"];
         delete?: never;
         options?: never;
         head?: never;
@@ -206,54 +302,6 @@ export interface paths {
         get: operations["UsersController_list"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/markets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["MarketsController_listMarkets"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/markets/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["MarketsController_getMarket"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/markets/sync": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["MarketsController_syncMarkets"];
         delete?: never;
         options?: never;
         head?: never;
@@ -525,6 +573,26 @@ export interface components {
             service: string;
             stage: string;
         };
+        SyncJobRunDto: {
+            id: string;
+            /** @enum {string} */
+            type: "MARKET_SYNC" | "ORDER_STATUS_SYNC" | "POSITION_SYNC" | "QUOTE_SYNC" | "TRADE_SYNC";
+            /** @enum {string} */
+            status: "FAILED" | "QUEUED" | "RUNNING" | "SUCCEEDED";
+            queueJobId: string | null;
+            requestedById: string | null;
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
+            failureReason: string | null;
+            metadata?: Record<string, never> | null;
+            result?: Record<string, never> | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         RegisterDto: {
             /** Format: email */
             email: string;
@@ -545,53 +613,6 @@ export interface components {
             /** Format: email */
             email: string;
             password: string;
-        };
-        AdminSummaryDto: {
-            registeredUsers: number;
-            adminUsers: number;
-            walletsConnected: number;
-            marketsSynced: number;
-            /** Format: date-time */
-            latestMarketSyncedAt: string | null;
-            marketQuotesSynced: number;
-            /** Format: date-time */
-            latestMarketQuoteSyncedAt: string | null;
-            ordersPreviewed: number;
-            openRiskEvents: number;
-        };
-        AdminGateDto: {
-            key: string;
-            title: string;
-            owner: string;
-            /** @enum {string} */
-            status: "READY" | "PENDING" | "BLOCKED";
-            /** Format: date-time */
-            updatedAt: string | null;
-            details?: string | null;
-        };
-        LiveApprovalReasonDto: Record<string, never>;
-        OrderRouterEnvironmentDto: {
-            /** @enum {string} */
-            mode: "preview" | "paper" | "live";
-            clobHost: string;
-            chainId: number | null;
-            builderCodeConfigured: boolean;
-            relayerConfigured: boolean;
-            rpcConfigured: boolean;
-            liveTradingEnabled: boolean;
-        };
-        ManagedUserDto: {
-            id: string;
-            /** Format: email */
-            email: string;
-            /** @enum {string} */
-            role: "ADMIN" | "USER";
-            /** Format: date-time */
-            createdAt: string;
-            walletCount: number;
-            /** @enum {string} */
-            walletStatus: "CONNECTED" | "NOT_CONNECTED";
-            primaryWalletAddress: string | null;
         };
         MarketQuoteItemDto: {
             outcome: string;
@@ -639,6 +660,53 @@ export interface components {
             quotesSynced: number;
             quotesFailed: number;
             error?: string;
+        };
+        AdminSummaryDto: {
+            registeredUsers: number;
+            adminUsers: number;
+            walletsConnected: number;
+            marketsSynced: number;
+            /** Format: date-time */
+            latestMarketSyncedAt: string | null;
+            marketQuotesSynced: number;
+            /** Format: date-time */
+            latestMarketQuoteSyncedAt: string | null;
+            ordersPreviewed: number;
+            openRiskEvents: number;
+        };
+        AdminGateDto: {
+            key: string;
+            title: string;
+            owner: string;
+            /** @enum {string} */
+            status: "READY" | "PENDING" | "BLOCKED";
+            /** Format: date-time */
+            updatedAt: string | null;
+            details?: string | null;
+        };
+        LiveApprovalReasonDto: Record<string, never>;
+        OrderRouterEnvironmentDto: {
+            /** @enum {string} */
+            mode: "preview" | "paper" | "live";
+            clobHost: string;
+            chainId: number | null;
+            builderCodeConfigured: boolean;
+            relayerConfigured: boolean;
+            rpcConfigured: boolean;
+            liveTradingEnabled: boolean;
+        };
+        ManagedUserDto: {
+            id: string;
+            /** Format: email */
+            email: string;
+            /** @enum {string} */
+            role: "ADMIN" | "USER";
+            /** Format: date-time */
+            createdAt: string;
+            walletCount: number;
+            /** @enum {string} */
+            walletStatus: "CONNECTED" | "NOT_CONNECTED";
+            primaryWalletAddress: string | null;
         };
         WalletChallengeDto: {
             /** Format: date-time */
@@ -836,6 +904,65 @@ export interface operations {
             };
         };
     };
+    SyncJobsController_enqueueMarketSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobRunDto"];
+                };
+            };
+        };
+    };
+    SyncJobsController_listJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobRunDto"][];
+                };
+            };
+        };
+    };
+    SyncJobsController_getJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobRunDto"];
+                };
+            };
+        };
+    };
     AuthController_register: {
         parameters: {
             query?: never;
@@ -897,6 +1024,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthUserDto"];
+                };
+            };
+        };
+    };
+    MarketsController_listMarkets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketListItemDto"][];
+                };
+            };
+        };
+    };
+    MarketsController_getMarket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketListItemDto"];
+                };
+            };
+        };
+    };
+    MarketsController_syncMarkets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketSyncResultDto"];
                 };
             };
         };
@@ -1066,65 +1252,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ManagedUserDto"][];
-                };
-            };
-        };
-    };
-    MarketsController_listMarkets: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MarketListItemDto"][];
-                };
-            };
-        };
-    };
-    MarketsController_getMarket: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MarketListItemDto"];
-                };
-            };
-        };
-    };
-    MarketsController_syncMarkets: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MarketSyncResultDto"];
                 };
             };
         };

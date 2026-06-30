@@ -103,6 +103,8 @@ export interface AdminAuditLog {
 const FUNDING_CACHE_TTL_MS = 5 * 60 * 1000;
 const LIVE_APPROVAL_SAFETY_NOTICE =
   "Manual approval records readiness only. It does not enable real CLOB submit.";
+const QUEUE_SYNC_SAFETY_NOTICE =
+  "This records readiness only and does not enable real CLOB submit.";
 const liveApprovalInclude = {
   approvedBy: {
     select: { email: true }
@@ -213,6 +215,7 @@ export class AdminService {
       latestFundingWallet,
       latestRelayerFailure,
       latestAuditLog,
+      latestMarketSyncJob,
       activeLiveApproval
     ] = await Promise.all([
       this.prisma.marketSnapshot.count(),
@@ -261,6 +264,17 @@ export class AdminService {
       this.prisma.auditLog.findFirst({
         orderBy: { createdAt: "desc" },
         select: { createdAt: true }
+      }),
+      this.prisma.syncJobRun.findFirst({
+        orderBy: { createdAt: "desc" },
+        select: {
+          completedAt: true,
+          createdAt: true,
+          failureReason: true,
+          status: true,
+          updatedAt: true
+        },
+        where: { type: "MARKET_SYNC" }
       }),
       this.findActiveLiveApproval()
     ]);
@@ -333,6 +347,7 @@ export class AdminService {
         updatedAt: latestAuditLog?.createdAt ?? null
       },
       this.fundingReadinessGate(latestFundingWallet),
+      this.queueSyncReadinessGate(latestMarketSyncJob),
       {
         key: "risk-event-review",
         title: "Risk event review",
@@ -460,6 +475,7 @@ export class AdminService {
       latestEoaWallet,
       latestDepositWallet,
       latestRelayerFailure,
+      latestMarketSyncJob,
       latestOrder
     ] = await Promise.all([
       this.prisma.marketSnapshot.count(),
@@ -495,6 +511,17 @@ export class AdminService {
           status: "FAILED"
         }
       }),
+      this.prisma.syncJobRun.findFirst({
+        orderBy: { createdAt: "desc" },
+        select: {
+          completedAt: true,
+          createdAt: true,
+          failureReason: true,
+          status: true,
+          updatedAt: true
+        },
+        where: { type: "MARKET_SYNC" }
+      }),
       this.prisma.order.findFirst({
         orderBy: { updatedAt: "desc" },
         select: { updatedAt: true }
@@ -516,6 +543,7 @@ export class AdminService {
         status: marketQuotesSynced > 0 ? "READY" : "PENDING",
         updatedAt: latestQuote?.syncedAt ?? null
       },
+      this.queueSyncAdminGate(latestMarketSyncJob),
       {
         key: "wallet-binding-proof",
         title: "Wallet binding proof",
@@ -662,6 +690,113 @@ export class AdminService {
       severity: "INFO",
       status: "READY",
       updatedAt
+    };
+  }
+
+  private queueSyncReadinessGate(
+    latestMarketSyncJob: {
+      completedAt: Date | null;
+      createdAt: Date;
+      failureReason: string | null;
+      status: string;
+      updatedAt: Date;
+    } | null
+  ): AdminRiskGate {
+    const base = {
+      key: "queue-sync-readiness",
+      title: "Queue sync readiness",
+      category: "market" as const,
+      blocking: true,
+      description: "Admin-triggered queue sync should complete before production readiness review."
+    };
+
+    if (!latestMarketSyncJob) {
+      return {
+        ...base,
+        evidence: `No market sync queue job has completed yet. ${QUEUE_SYNC_SAFETY_NOTICE}`,
+        severity: "WARNING",
+        status: "PENDING",
+        updatedAt: null
+      };
+    }
+
+    if (latestMarketSyncJob.status === "SUCCEEDED") {
+      return {
+        ...base,
+        evidence: `Latest market sync queue job succeeded. ${QUEUE_SYNC_SAFETY_NOTICE}`,
+        severity: "INFO",
+        status: "READY",
+        updatedAt: latestMarketSyncJob.completedAt ?? latestMarketSyncJob.updatedAt
+      };
+    }
+
+    if (latestMarketSyncJob.status === "FAILED") {
+      return {
+        ...base,
+        evidence: `Latest market sync queue job failed: ${
+          latestMarketSyncJob.failureReason ?? "unknown failure"
+        }. ${QUEUE_SYNC_SAFETY_NOTICE}`,
+        severity: "CRITICAL",
+        status: "BLOCKED",
+        updatedAt: latestMarketSyncJob.completedAt ?? latestMarketSyncJob.updatedAt
+      };
+    }
+
+    return {
+      ...base,
+      evidence: `Latest market sync queue job is ${latestMarketSyncJob.status.toLowerCase()}. ${QUEUE_SYNC_SAFETY_NOTICE}`,
+      severity: "WARNING",
+      status: "PENDING",
+      updatedAt: latestMarketSyncJob.updatedAt ?? latestMarketSyncJob.createdAt
+    };
+  }
+
+  private queueSyncAdminGate(
+    latestMarketSyncJob: {
+      completedAt: Date | null;
+      createdAt: Date;
+      failureReason: string | null;
+      status: string;
+      updatedAt: Date;
+    } | null
+  ): AdminGate {
+    if (!latestMarketSyncJob) {
+      return {
+        key: "queue-sync-readiness",
+        owner: "Engineering",
+        status: "PENDING",
+        title: "Queue sync readiness",
+        updatedAt: null
+      };
+    }
+
+    if (latestMarketSyncJob.status === "SUCCEEDED") {
+      return {
+        key: "queue-sync-readiness",
+        owner: "Engineering",
+        status: "READY",
+        title: "Queue sync readiness",
+        updatedAt: latestMarketSyncJob.completedAt ?? latestMarketSyncJob.updatedAt
+      };
+    }
+
+    if (latestMarketSyncJob.status === "FAILED") {
+      return {
+        details: latestMarketSyncJob.failureReason,
+        key: "queue-sync-readiness",
+        owner: "Engineering",
+        status: "BLOCKED",
+        title: "Queue sync readiness",
+        updatedAt: latestMarketSyncJob.completedAt ?? latestMarketSyncJob.updatedAt
+      };
+    }
+
+    return {
+      key: "queue-sync-readiness",
+      owner: "Engineering",
+      status: "PENDING",
+      title: "Queue sync readiness",
+      updatedAt: latestMarketSyncJob.updatedAt ?? latestMarketSyncJob.createdAt
     };
   }
 

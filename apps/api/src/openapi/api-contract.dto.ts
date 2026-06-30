@@ -153,6 +153,46 @@ export class MarketSyncResultDto {
   error?: string;
 }
 
+export class SyncJobRunDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty({
+    enum: ["MARKET_SYNC", "ORDER_STATUS_SYNC", "POSITION_SYNC", "QUOTE_SYNC", "TRADE_SYNC"]
+  })
+  type!: string;
+
+  @ApiProperty({ enum: ["FAILED", "QUEUED", "RUNNING", "SUCCEEDED"] })
+  status!: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  queueJobId!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  requestedById!: string | null;
+
+  @ApiProperty({ format: "date-time", nullable: true, type: String })
+  startedAt!: string | null;
+
+  @ApiProperty({ format: "date-time", nullable: true, type: String })
+  completedAt!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  failureReason!: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: Object })
+  metadata?: unknown;
+
+  @ApiPropertyOptional({ nullable: true, type: Object })
+  result?: unknown;
+
+  @ApiProperty({ format: "date-time" })
+  createdAt!: string;
+
+  @ApiProperty({ format: "date-time" })
+  updatedAt!: string;
+}
+
 export class AdminSummaryDto {
   @ApiProperty()
   registeredUsers!: number;
